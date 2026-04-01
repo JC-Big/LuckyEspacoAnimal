@@ -31,7 +31,6 @@ import {
   InputAdornment,
   Tabs,
   Tab,
-  Checkbox,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -177,7 +176,7 @@ export default function Appointments() {
       <Card sx={{ mb: 4 }}>
         <Tabs
           value={tabIndex}
-          onChange={(_, v) => setTabIndex(v)}
+          onChange={(_: any, v: number) => setTabIndex(v)}
           sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}
         >
           <Tab label="Próximos" />

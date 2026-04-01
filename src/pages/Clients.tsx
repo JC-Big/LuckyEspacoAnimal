@@ -19,7 +19,6 @@ import {
   MenuItem,
   useMediaQuery,
   useTheme,
-  Tooltip,
   Avatar,
   InputAdornment,
 } from '@mui/material';
@@ -30,7 +29,6 @@ import PetsIcon from '@mui/icons-material/Pets';
 import PersonIcon from '@mui/icons-material/Person';
 import PhoneIcon from '@mui/icons-material/Phone';
 import SearchIcon from '@mui/icons-material/Search';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CloseIcon from '@mui/icons-material/Close';
 import { useStore } from '../store';
 import type { Client } from '../store';
@@ -96,7 +94,7 @@ export default function Clients() {
   const handleSave = () => {
     if (!form.name.trim() || !form.petName.trim()) return;
     if (editing) {
-      updateClient({ ...form, id: editing.id });
+      updateClient({ ...editing, ...form });
     } else {
       addClient(form);
     }
