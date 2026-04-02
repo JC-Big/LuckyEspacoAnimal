@@ -177,6 +177,9 @@ export default function Appointments() {
         <Tabs
           value={tabIndex}
           onChange={(_: any, v: number) => setTabIndex(v)}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
           sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}
         >
           <Tab label="Próximos" />
@@ -210,19 +213,20 @@ export default function Appointments() {
               sx={{ 
                 borderLeft: '6px solid', 
                 borderColor: isToday ? 'primary.main' : 'divider',
+                maxWidth: '100%'
               }}
               onClick={() => handleOpenView(a)}
             >
               <CardContent sx={{ pb: 1 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <Typography variant="subtitle1" fontWeight={700}>
+                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 1 }}>
+                  <Typography variant="subtitle1" fontWeight={700} sx={{ lineHeight: 1.2 }}>
                     {client?.petName || 'Pet'}
                   </Typography>
                   <Chip 
                     label={statusConfig[a.status].label} 
                     color={statusConfig[a.status].color} 
                     size="small" 
-                    sx={{ fontWeight: 700 }}
+                    sx={{ fontWeight: 700, height: 20, fontSize: '0.65rem' }}
                   />
                 </Box>
                 <Typography variant="body2" color="text.secondary">
@@ -235,37 +239,37 @@ export default function Appointments() {
                   </Typography>
                 </Box>
               </CardContent>
-              <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 1.5 }}>
+              <CardActions sx={{ justifyContent: 'flex-end', px: 1, pb: 1, gap: 0 }}>
                 {a.status === 'agendado' && (
                   <>
                     <IconButton 
                       color="success" 
                       onClick={(e) => { e.stopPropagation(); handleStatusChange(a.id, 'concluido'); }}
-                      size="medium"
-                      sx={{ p: 1.5 }}
+                      size="small"
+                      sx={{ p: 0.5 }}
                     >
-                      <CheckCircleIcon />
+                      <CheckCircleIcon fontSize="small" />
                     </IconButton>
                     <IconButton 
                       color="warning" 
                       onClick={(e) => { e.stopPropagation(); handleStatusChange(a.id, 'cancelado'); }}
-                      size="medium"
-                      sx={{ p: 1.5 }}
+                      size="small"
+                      sx={{ p: 0.5 }}
                     >
-                      <CancelIcon />
+                      <CancelIcon fontSize="small" />
                     </IconButton>
                   </>
                 )}
                 <IconButton
                   color="error"
-                  size="medium"
-                  sx={{ p: 1.5 }}
+                  size="small"
+                  sx={{ p: 0.5 }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setDeleteId(a.id);
                   }}
                 >
-                  <DeleteIcon />
+                  <DeleteIcon fontSize="small" />
                 </IconButton>
               </CardActions>
             </Card>

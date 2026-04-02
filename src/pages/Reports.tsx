@@ -204,8 +204,8 @@ export default function Reports() {
           <Avatar sx={{ bgcolor: 'primary.main', width: 44, height: 44 }}>
             <AssessmentIcon sx={{ fontSize: 24 }} />
           </Avatar>
-          <Box>
-            <Typography variant="h4">Relatórios</Typography>
+          <Box sx={{ mt: { xs: 2, md: 0 } }}>
+            <Typography variant="h4" sx={{ fontWeight: 800 }}>Relatórios</Typography>
             <Typography variant="body2" color="text.secondary">
               Gere relatórios sintéticos de dados customizados
             </Typography>
@@ -214,7 +214,7 @@ export default function Reports() {
 
         <Paper sx={{ p: 3, mb: 4, borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
           <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' } }}>
-            <Box>
+            <Box sx={{ gridColumn: { xs: '1 / -1', md: 'auto' } }}>
               <TextField 
                 label="Data Inicial" 
                 type="date" 
@@ -224,7 +224,7 @@ export default function Reports() {
                 slotProps={{ inputLabel: { shrink: true } }} 
               />
             </Box>
-            <Box>
+            <Box sx={{ gridColumn: { xs: '1 / -1', md: 'auto' } }}>
               <TextField 
                 label="Data Final" 
                 type="date" 
@@ -234,7 +234,7 @@ export default function Reports() {
                 slotProps={{ inputLabel: { shrink: true } }} 
               />
             </Box>
-            <Box>
+            <Box sx={{ gridColumn: { xs: '1 / -1', md: 'auto' } }}>
               <TextField 
                 label="Categoria do Relatório" 
                 select 
@@ -337,7 +337,8 @@ export default function Reports() {
                 overflowX: 'auto',
                 width: '100%',
                 display: 'block',
-                '& table': { minWidth: isMobile ? 600 : 'auto' }
+                '& table': { minWidth: isMobile ? 600 : 'auto' },
+                pb: 12
               }}
             >
               {category === 'estoque' && renderEstoqueTable(reportData as Product[])}

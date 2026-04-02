@@ -137,7 +137,7 @@ export default function Layout() {
   ];
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default', maxWidth: '100vw', overflowX: 'hidden' }}>
       {/* AppBar – mobile only */}
       {isMobile && (
         <AppBar
@@ -180,13 +180,17 @@ export default function Layout() {
         component="main"
         sx={{
           flexGrow: 1,
-          p: { xs: 2.5, sm: 3, md: 4 },
-          pt: isMobile ? 10 : 4,
+          p: { xs: 2, sm: 3, md: 4 },
           pb: isMobile ? 12 : 4,
           width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
+          maxWidth: '100vw',
+          overflowX: 'hidden',
           minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
+        <Toolbar />
         <Outlet />
       </Box>
 

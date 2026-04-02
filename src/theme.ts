@@ -95,6 +95,21 @@ const baseTheme = createTheme({
         },
       },
     },
+    MuiBottomNavigationAction: {
+      styleOverrides: {
+        label: {
+          fontSize: '0.65rem',
+          '&.Mui-selected': {
+            fontSize: '0.7rem',
+          },
+        },
+        root: {
+          padding: '6px 0 8px',
+          minWidth: 'auto',
+          boxSizing: 'border-box',
+        },
+      },
+    },
   },
 });
 

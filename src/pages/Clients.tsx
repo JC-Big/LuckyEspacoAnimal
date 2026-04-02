@@ -109,7 +109,7 @@ export default function Clients() {
   };
 
   return (
-    <Box>
+    <Box sx={{ mt: { xs: 1, md: 0 } }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 800 }}>Clientes</Typography>
@@ -141,7 +141,7 @@ export default function Clients() {
         />
       </Card>
 
-      <Stack spacing={2}>
+      <Stack spacing={2} sx={{ pb: 10 }}>
         {filteredClients.map(c => (
           <Card key={c.id} sx={{ transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-2px)' } }}>
             <CardContent sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>

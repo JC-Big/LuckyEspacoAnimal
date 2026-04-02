@@ -183,7 +183,7 @@ export default function Inventory() {
   };
 
   return (
-    <Box>
+    <Box sx={{ mt: { xs: 1, md: 0 } }}>
       {/* Header */}
       <Box
         sx={{
@@ -326,7 +326,7 @@ export default function Inventory() {
       </TableContainer>
 
       {/* ─── Mobile Cards ───────────────────────────────── */}
-      <Stack spacing={2} sx={{ display: { xs: 'flex', sm: 'none' } }}>
+      <Stack spacing={2} sx={{ display: { xs: 'flex', sm: 'none' }, pb: 10 }}>
         {filteredProducts.map(p => {
           const totalQty = getProductTotalQty(p.id);
           const expDate = getProductExpiration(p.id);

@@ -133,7 +133,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <Box>
+    <Box sx={{ mt: { xs: 2, md: 0 } }}>
       <Typography variant="h4" sx={{ mb: 0.5 }}>
         Dashboard
       </Typography>
