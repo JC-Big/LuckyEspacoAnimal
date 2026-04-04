@@ -43,8 +43,8 @@ import dayjs from 'dayjs';
 
 const categories = ['Alimentação', 'Higiene', 'Acessórios', 'Brinquedos', 'Medicamentos', 'Outros'];
 
-const emptyProduct: Omit<Product, 'id' | 'createdAt' | 'seqId'> = { name: '', category: 'Alimentação', minQuantity: 0 };
-const emptyBatch = (productId: string): Omit<ProductBatch, 'id'> => ({ 
+const emptyProduct: Omit<Product, 'id' | 'createdAt' | 'seqId'> = { shortId: '', name: '', category: 'Alimentação', minQuantity: 0 };
+const emptyBatch = (productId: string): Omit<ProductBatch, 'id' | 'seqId'> => ({ 
   productId, 
   description: '', 
   entryDate: dayjs().format('YYYY-MM-DD'), 
@@ -101,7 +101,7 @@ export default function Inventory() {
   // Batches Modal State
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [batchesDialogOpen, setBatchesDialogOpen] = useState(false);
-  const [batchForm, setBatchForm] = useState<Omit<ProductBatch, 'id'> | null>(null);
+  const [batchForm, setBatchForm] = useState<Omit<ProductBatch, 'id' | 'seqId'> | null>(null);
   const [editingBatchId, setEditingBatchId] = useState<string | null>(null);
 
   const [movDialogOpen, setMovDialogOpen] = useState(false);
@@ -129,7 +129,7 @@ export default function Inventory() {
 
   const openEdit = (p: Product) => {
     setEditing(p);
-    setForm({ name: p.name, category: p.category, minQuantity: p.minQuantity });
+    setForm({ shortId: p.shortId, name: p.name, category: p.category, minQuantity: p.minQuantity });
     setDialogOpen(true);
   };
 
@@ -252,6 +252,7 @@ export default function Inventory() {
           <TableHead>
             <TableRow>
               <TableCell sx={{ width: 80 }}>#ID</TableCell>
+              <TableCell>ID Prod</TableCell>
               <TableCell>Produto</TableCell>
               <TableCell>Categoria</TableCell>
               <TableCell align="center">Validade</TableCell>
@@ -269,6 +270,7 @@ export default function Inventory() {
                   <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>
                     #{String(p.seqId).padStart(3, '0')}
                   </TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: 'primary.main' }}>{p.shortId}</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>{p.name}</TableCell>
                   <TableCell>{p.category}</TableCell>
                   <TableCell align="center">
@@ -336,7 +338,7 @@ export default function Inventory() {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, bgcolor: 'action.hover', px: 1, borderRadius: 1 }}>
-                      #{String(p.seqId).padStart(3, '0')}
+                      {p.shortId}
                     </Typography>
                     <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
                       {p.name}
@@ -410,6 +412,7 @@ export default function Inventory() {
           {editing ? 'Editar Categoria' : 'Novo Modelo de Produto'}
         </DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: '16px !important' }}>
+          <TextField label="ID Único do Produto (ex: COLM)" fullWidth value={form.shortId} onChange={e => setForm({ ...form, shortId: e.target.value.toUpperCase() })} />
           <TextField label="Nome do Modelo (ex: Ração Golden 15kg)" fullWidth value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
           <TextField label="Categoria" select fullWidth value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
             {categories.map(c => (<MenuItem key={c} value={c}>{c}</MenuItem>))}
@@ -425,14 +428,15 @@ export default function Inventory() {
       {/* ─── Batches (Entries) Dialog ─────────────────── */}
       <Dialog open={batchesDialogOpen} onClose={() => setBatchesDialogOpen(false)} fullScreen={isMobile} fullWidth maxWidth="md">
         {isMobile && (
-          <AppBar sx={{ position: 'relative', bgcolor: 'secondary.main' }} elevation={0}>
+          <AppBar sx={{ position: 'relative', bgcolor: 'primary.main' }} elevation={0}>
             <Toolbar>
               <IconButton edge="start" color="inherit" onClick={() => setBatchesDialogOpen(false)} aria-label="close">
                 <CloseIcon />
               </IconButton>
               <Typography sx={{ ml: 2, flex: 1, fontWeight: 700 }} variant="h6">
-                Lotes de: {selectedProduct?.name}
+                Lotes
               </Typography>
+              <Button color="inherit" onClick={() => setBatchForm(emptyBatch(selectedProduct!.id))} startIcon={<AddIcon />}>Novo</Button>
             </Toolbar>
           </AppBar>
         )}
@@ -477,10 +481,11 @@ export default function Inventory() {
             </Paper>
           )}
 
-          <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+          <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, overflowX: 'auto' }}>
             <Table size="small">
               <TableHead>
                 <TableRow sx={{ bgcolor: 'action.hover' }}>
+                  <TableCell>Cód</TableCell>
                   <TableCell>Descrição</TableCell>
                   <TableCell align="center">Entrada</TableCell>
                   <TableCell align="center">Validade</TableCell>
@@ -491,6 +496,7 @@ export default function Inventory() {
               <TableBody>
                 {batches.filter(b => b.productId === selectedProduct?.id).map(b => (
                   <TableRow key={b.id}>
+                    <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>{selectedProduct?.shortId}-{b.seqId}</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>{b.description || 'Lote Único'}</TableCell>
                     <TableCell align="center">{dayjs(b.entryDate).format('DD/MM/YY')}</TableCell>
                     <TableCell align="center">
@@ -513,7 +519,7 @@ export default function Inventory() {
                   </TableRow>
                 ))}
                 {batches.filter(b => b.productId === selectedProduct?.id).length === 0 && (
-                  <TableRow><TableCell colSpan={5} align="center" sx={{ py: 3 }}>Nenhum lote cadastrado.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} align="center" sx={{ py: 3 }}>Nenhum lote cadastrado.</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>

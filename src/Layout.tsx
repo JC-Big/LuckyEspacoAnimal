@@ -32,11 +32,11 @@ import ReceiptIcon from '@mui/icons-material/Receipt';
 const DRAWER_WIDTH = 260;
 
 const navItems = [
-  { label: 'Dashboard', path: '/', icon: <DashboardIcon /> },
-  { label: 'Estoque', path: '/inventory', icon: <InventoryIcon /> },
-  { label: 'Clientes', path: '/clients', icon: <PeopleIcon /> },
-  { label: 'Agendamentos', path: '/appointments', icon: <CalendarMonthIcon /> },
-  { label: 'Relatórios', path: '/reports', icon: <AssessmentIcon /> },
+  { label: 'Dashboard', path: '/', icon: <DashboardIcon />, color: 'error' },
+  { label: 'Estoque', path: '/inventory', icon: <InventoryIcon />, color: 'primary' },
+  { label: 'Clientes', path: '/clients', icon: <PeopleIcon />, color: 'info' },
+  { label: 'Agendamentos', path: '/appointments', icon: <CalendarMonthIcon />, color: 'secondary' },
+  { label: 'Relatórios', path: '/reports', icon: <AssessmentIcon />, color: 'warning' },
 ];
 
 export default function Layout() {
@@ -96,17 +96,17 @@ export default function Layout() {
                 mb: 0.5,
                 px: 2,
                 py: 1.2,
-                bgcolor: selected ? 'primary.main' : 'transparent',
+                bgcolor: selected ? `${item.color}.main` : 'transparent',
                 color: selected ? '#fff' : 'text.primary',
                 '&:hover': {
-                  bgcolor: selected ? 'primary.dark' : 'action.hover',
+                  bgcolor: selected ? `${item.color}.dark` : 'action.hover',
                 },
                 transition: 'all 0.2s ease',
               }}
             >
               <ListItemIcon
                 sx={{
-                  color: selected ? '#fff' : 'primary.main',
+                  color: selected ? '#fff' : `${item.color}.main`,
                   minWidth: 40,
                 }}
               >
@@ -131,13 +131,25 @@ export default function Layout() {
   );
 
   const quickActions = [
-    { icon: <PeopleIcon />, name: 'Novo Cliente', action: () => navigate('/clients?add=true') },
-    { icon: <InventoryIcon />, name: 'Novo Produto', action: () => navigate('/inventory?add=true') },
-    { icon: <CalendarMonthIcon />, name: 'Novo Agendamento', action: () => navigate('/appointments?add=true') },
+    { icon: <PeopleIcon />, name: 'Novo Cliente', action: () => navigate('/clients?add=true'), color: 'info' },
+    { icon: <InventoryIcon />, name: 'Novo Produto', action: () => navigate('/inventory?add=true'), color: 'primary' },
+    { icon: <CalendarMonthIcon />, name: 'Novo Agendamento', action: () => navigate('/appointments?add=true'), color: 'secondary' },
   ];
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default', maxWidth: '100vw', overflowX: 'hidden' }}>
+    <Box sx={{ 
+      display: 'flex', 
+      minHeight: '100vh', 
+      bgcolor: 'background.default', 
+      maxWidth: '100vw', 
+      overflowX: 'hidden',
+      '@media print': {
+        display: 'block',
+        minHeight: 'auto',
+        overflow: 'visible',
+        maxWidth: '100%'
+      }
+    }}>
       {/* AppBar – mobile only */}
       {isMobile && (
         <AppBar
@@ -188,6 +200,15 @@ export default function Layout() {
           minHeight: '100vh',
           display: 'flex',
           flexDirection: 'column',
+          '@media print': {
+            display: 'block',
+            width: '100%',
+            maxWidth: '100%',
+            overflow: 'visible',
+            minHeight: 'auto',
+            p: 0,
+            m: 0
+          }
         }}
       >
         <Toolbar />
@@ -206,6 +227,7 @@ export default function Layout() {
             borderTop: '1px solid',
             borderColor: 'divider',
             boxShadow: '0 -4px 16px rgba(0,0,0,0.06)',
+            '@media print': { display: 'none' }
           }} 
           elevation={3}
         >
@@ -226,7 +248,7 @@ export default function Layout() {
                 sx={{
                   color: 'text.secondary',
                   '&.Mui-selected': {
-                    color: 'primary.main',
+                    color: `${item.color}.main`,
                     fontWeight: 700,
                   },
                 }}
@@ -240,7 +262,12 @@ export default function Layout() {
       {isMobile && (
         <SpeedDial
           ariaLabel="Ações Rápidas"
-          sx={{ position: 'fixed', bottom: 88, right: 16 }}
+          sx={{ 
+            position: 'fixed', 
+            bottom: 88, 
+            right: 16,
+            '@media print': { display: 'none' }
+          }}
           icon={<SpeedDialIcon icon={<AddIcon />} openIcon={<ReceiptIcon />} />}
         >
           {quickActions.map((action) => (
@@ -252,9 +279,9 @@ export default function Layout() {
               onClick={action.action}
               FabProps={{
                 sx: {
-                  bgcolor: 'secondary.main',
+                  bgcolor: `${action.color}.main`,
                   color: 'white',
-                  '&:hover': { bgcolor: 'secondary.dark' }
+                  '&:hover': { bgcolor: `${action.color}.dark` }
                 }
               }}
             />

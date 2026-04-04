@@ -25,11 +25,11 @@ import PrintIcon from '@mui/icons-material/Print';
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import { useStore } from '../store';
-import type { Product, Client, Appointment } from '../store';
+import type { Product, ProductBatch, Client, Appointment } from '../store';
 
 dayjs.extend(isBetween);
 
-type Category = 'estoque' | 'clientes' | 'agendamentos';
+type Category = 'estoque' | 'clientes' | 'agendamentos' | 'vencimentos';
 type SortType = 'nome' | 'data' | 'id';
 
 export default function Reports() {
@@ -82,6 +82,12 @@ export default function Reports() {
         return d;
       });
       setReportData(result);
+    } 
+    else if (category === 'vencimentos') {
+      let result = batches.filter(b => dayjs(b.expirationDate).isBetween(start, end, null, '[]'));
+      // Always sort by expiration date ascending (nearest first)
+      result.sort((a, b) => dayjs(a.expirationDate).diff(dayjs(b.expirationDate)));
+      setReportData(result);
     }
   };
 
@@ -124,7 +130,8 @@ export default function Reports() {
         <TableRow>
           <TableCell><b>ID</b></TableCell>
           <TableCell><b>Cadastro</b></TableCell>
-          <TableCell><b>Tutor / Contato</b></TableCell>
+          <TableCell><b>Tutor</b></TableCell>
+          <TableCell><b>Contato</b></TableCell>
           <TableCell><b>Endereço</b></TableCell>
           <TableCell><b>Pet</b></TableCell>
           <TableCell><b>Espécie / Raça</b></TableCell>
@@ -135,13 +142,11 @@ export default function Reports() {
           <TableRow key={c.id}>
             <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>#{String(c.seqId).padStart(3, '0')}</TableCell>
             <TableCell>{dayjs(c.createdAt).format('DD/MM/YYYY')}</TableCell>
-            <TableCell>
-              <Typography variant="body2" fontWeight={600}>{c.name}</Typography>
-              <Typography variant="caption" color="text.secondary">{c.phone}</Typography>
-            </TableCell>
+            <TableCell sx={{ fontWeight: 600 }}>{c.name}</TableCell>
+            <TableCell>{c.phone}</TableCell>
             <TableCell>
               {c.addressStreet ? (
-                <Typography variant="body2" sx={{ maxWidth: 200, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <Typography variant="body2" sx={{ maxWidth: 180, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {c.addressStreet}, {c.addressNumber} - {c.addressCity}
                 </Typography>
               ) : '-'}
@@ -196,12 +201,60 @@ export default function Reports() {
     </Table>
   );
 
+  const renderVencimentosTable = (data: ProductBatch[]) => (
+    <Table size="small">
+      <TableHead sx={{ bgcolor: 'action.hover' }}>
+        <TableRow>
+          <TableCell><b>Cód. Lote</b></TableCell>
+          <TableCell><b>Data Entrada</b></TableCell>
+          <TableCell><b>Produto</b></TableCell>
+          <TableCell><b>Vencimento</b></TableCell>
+          <TableCell align="center"><b>Qtd.</b></TableCell>
+          <TableCell><b>Status</b></TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {data.map(b => {
+          const prod = products.find(p => p.id === b.productId);
+          const diffDays = dayjs(b.expirationDate).startOf('day').diff(dayjs().startOf('day'), 'day');
+          let statusText = 'Na validade';
+          let statusColor = '#2e7d32'; // green
+          if (diffDays < 0) { 
+            statusText = 'Vencido'; 
+            statusColor = '#d32f2f'; // red
+          } else if (diffDays <= 30) { 
+            statusText = 'Vencendo'; 
+            statusColor = '#ed6c02'; // orange
+          }
+
+          return (
+            <TableRow key={b.id}>
+              <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>{prod?.shortId}-{b.seqId}</TableCell>
+              <TableCell>{dayjs(b.entryDate).format('DD/MM/YYYY')}</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>{prod ? prod.name : 'Desconhecido'}</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>{dayjs(b.expirationDate).format('DD/MM/YYYY')}</TableCell>
+              <TableCell align="center">{b.quantity}</TableCell>
+              <TableCell>
+                <Typography variant="body2" sx={{ color: statusColor, fontWeight: 800, textTransform: 'uppercase', fontSize: '0.75rem' }}>
+                  {statusText}
+                </Typography>
+              </TableCell>
+            </TableRow>
+          );
+        })}
+        {data.length === 0 && (
+          <TableRow><TableCell colSpan={6} align="center">Nenhum registro encontrado.</TableCell></TableRow>
+        )}
+      </TableBody>
+    </Table>
+  );
+
   return (
     <Box sx={{ pb: 6 }}>
       {/* Remove UI from print output */}
       <Box sx={{ '@media print': { display: 'none' } }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 1.5 }}>
-          <Avatar sx={{ bgcolor: 'primary.main', width: 44, height: 44 }}>
+          <Avatar sx={{ bgcolor: 'warning.main', width: 44, height: 44 }}>
             <AssessmentIcon sx={{ fontSize: 24 }} />
           </Avatar>
           <Box sx={{ mt: { xs: 2, md: 0 } }}>
@@ -212,12 +265,13 @@ export default function Reports() {
           </Box>
         </Box>
 
-        <Paper sx={{ p: 3, mb: 4, borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+        <Paper className="no-print" sx={{ p: 3, mb: 4, borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.05)', '@media print': { display: 'none' } }}>
           <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' } }}>
             <Box sx={{ gridColumn: { xs: '1 / -1', md: 'auto' } }}>
               <TextField 
                 label="Data Inicial" 
                 type="date" 
+                color="warning"
                 fullWidth 
                 value={startDate} 
                 onChange={e => setStartDate(e.target.value)} 
@@ -228,6 +282,7 @@ export default function Reports() {
               <TextField 
                 label="Data Final" 
                 type="date" 
+                color="warning"
                 fullWidth 
                 value={endDate} 
                 onChange={e => setEndDate(e.target.value)} 
@@ -238,6 +293,7 @@ export default function Reports() {
               <TextField 
                 label="Categoria do Relatório" 
                 select 
+                color="warning"
                 fullWidth 
                 value={category} 
                 onChange={e => {
@@ -246,6 +302,7 @@ export default function Reports() {
                 }}
               >
                 <MenuItem value="estoque">Estoque de Produtos</MenuItem>
+                <MenuItem value="vencimentos">Vencimento de Produtos</MenuItem>
                 <MenuItem value="clientes">Cadastro de Clientes</MenuItem>
                 <MenuItem value="agendamentos">Agendamentos</MenuItem>
               </TextField>
@@ -258,22 +315,30 @@ export default function Reports() {
                     Opções de Filtro e Ordenação
                   </FormLabel>
                   
-                  {category !== 'agendamentos' ? (
+                  {category === 'vencimentos' && (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Os produtos são automaticamente ordenados pela data de vencimento (do mais próximo ao mais distante).
+                      </Typography>
+                    </Box>
+                  )}
+                  {category !== 'agendamentos' && category !== 'vencimentos' && (
                     <RadioGroup row value={sortBy} onChange={(e) => setSortBy(e.target.value as SortType)}>
-                      <FormControlLabel value="nome" control={<Radio size="small" />} label={`Ordenar por Nome ${category === 'estoque' ? 'do Produto' : 'do Cliente'}`} />
-                      <FormControlLabel value="data" control={<Radio size="small" />} label="Ordenar por Data de Cadastro" />
-                      <FormControlLabel value="id" control={<Radio size="small" />} label="Ordenar por ID" />
+                      <FormControlLabel value="nome" control={<Radio size="small" color="warning" />} label={`Ordenar por Nome ${category === 'estoque' ? 'do Produto' : 'do Cliente'}`} />
+                      <FormControlLabel value="data" control={<Radio size="small" color="warning" />} label="Ordenar por Data de Cadastro" />
+                      <FormControlLabel value="id" control={<Radio size="small" color="warning" />} label="Ordenar por ID" />
                     </RadioGroup>
-                  ) : (
+                  )}
+                  {category === 'agendamentos' && (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                       <Typography variant="caption" color="text.secondary">
                         Os agendamentos são automaticamente ordenados por Data e Hora.
                       </Typography>
                       <RadioGroup row value={apptStatusPattern} onChange={(e) => setApptStatusPattern(e.target.value)}>
-                        <FormControlLabel value="todos" control={<Radio size="small" />} label="Todos os Status" />
-                        <FormControlLabel value="agendado" control={<Radio size="small" />} label="Apenas Agendado" />
-                        <FormControlLabel value="concluido" control={<Radio size="small" />} label="Apenas Concluído" />
-                        <FormControlLabel value="cancelado" control={<Radio size="small" />} label="Apenas Cancelado" />
+                        <FormControlLabel value="todos" control={<Radio size="small" color="warning" />} label="Todos os Status" />
+                        <FormControlLabel value="agendado" control={<Radio size="small" color="warning" />} label="Apenas Agendado" />
+                        <FormControlLabel value="concluido" control={<Radio size="small" color="warning" />} label="Apenas Concluído" />
+                        <FormControlLabel value="cancelado" control={<Radio size="small" color="warning" />} label="Apenas Cancelado" />
                       </RadioGroup>
                     </Box>
                   )}
@@ -284,10 +349,11 @@ export default function Reports() {
             <Box sx={{ gridColumn: '1 / -1' }}>
               <Button 
                 variant="contained" 
+                color="warning"
                 size="large" 
                 fullWidth 
                 onClick={handleGenerate}
-                sx={{ py: 1.5, fontSize: '1rem', fontWeight: 700 }}
+                sx={{ py: 1.5, fontSize: '1rem', fontWeight: 700, color: '#fff' }}
               >
                 Gerar Relatório
               </Button>
@@ -302,6 +368,7 @@ export default function Reports() {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, '@media print': { display: 'none' }}}>
             <Typography variant="h6">Resultado do Relatório</Typography>
             <Button 
+              color="warning"
               startIcon={<PrintIcon />} 
               variant="outlined" 
               onClick={handlePrint}
@@ -312,6 +379,7 @@ export default function Reports() {
           
           <Paper 
             ref={printAreaRef}
+            className="print-area"
             sx={{ 
               p: 4, 
               '@media print': { 
@@ -322,7 +390,7 @@ export default function Reports() {
             }}
           >
             {/* Header that only shows beautifully in print but we can show it here too */}
-            <Box sx={{ borderBottom: '2px solid', borderColor: 'divider', pb: 2, mb: 3 }}>
+            <Box className="print-header" sx={{ borderBottom: '2px solid', borderColor: 'divider', pb: 2, mb: 3 }}>
               <Typography variant="h5" sx={{ fontWeight: 800 }}>Módulo de Relatório - Lucky Animal</Typography>
               <Typography variant="body2" color="text.secondary">
                 Categoria: {category.toUpperCase()}<br/>
@@ -333,15 +401,22 @@ export default function Reports() {
 
             <TableContainer 
               sx={{ 
-                '@media print': { overflow: 'visible' },
                 overflowX: 'auto',
                 width: '100%',
                 display: 'block',
-                '& table': { minWidth: isMobile ? 600 : 'auto' },
-                pb: 12
+                '& table': { 
+                  minWidth: isMobile ? 600 : 'auto',
+                  '@media print': { minWidth: '100% !important' }
+                },
+                pb: 12,
+                '@media print': { 
+                  overflow: 'visible',
+                  pb: 0 
+                }
               }}
             >
               {category === 'estoque' && renderEstoqueTable(reportData as Product[])}
+              {category === 'vencimentos' && renderVencimentosTable(reportData as ProductBatch[])}
               {category === 'clientes' && renderClientesTable(reportData as Client[])}
               {category === 'agendamentos' && renderAgendamentosTable(reportData as Appointment[])}
             </TableContainer>
@@ -358,17 +433,76 @@ export default function Reports() {
         </Box>
       )}
 
-      {/* Global Style for Printing */}
       <style>
         {`
           @media print {
-            @page { margin: 1.5cm; }
-            body { 
+            @page { 
+              margin: 1cm; 
+              size: auto;
+            }
+            html, body, #root { 
               background-color: white !important; 
               color: black !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              height: auto !important;
+              min-height: auto !important;
+              overflow: visible !important;
             }
-            .MuiDrawer-root, .MuiAppBar-root { display: none !important; }
-            main { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+            /* Hide all UI elements from print */
+            .MuiDrawer-root, 
+            .MuiAppBar-root, 
+            .MuiBottomNavigation-root, 
+            .MuiSpeedDial-root,
+            .MuiButton-root:not(.keep-print),
+            .no-print { 
+              display: none !important; 
+            }
+            
+            /* Reset layout for print */
+            main { 
+              margin: 0 !important; 
+              padding: 0 !important; 
+              width: 100% !important; 
+              display: block !important;
+              min-height: auto !important;
+              overflow: visible !important;
+            }
+            .MuiToolbar-root { display: none !important; }
+
+            /* Ensure report container is clean */
+            .print-area {
+              box-shadow: none !important;
+              border: none !important;
+              padding: 0 !important;
+              margin: 0 !important;
+              width: 100% !important;
+              background-color: white !important;
+            }
+
+            /* Tables in print */
+            .MuiTableContainer-root {
+              overflow: visible !important;
+              display: block !important;
+              width: auto !important;
+            }
+            .MuiTable-root {
+              width: 100% !important;
+              table-layout: auto !important;
+            }
+            
+            /* Prevent rows from breaking */
+            tr {
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+            
+            /* Header styling for print */
+            .print-header {
+              border-bottom: 2px solid #ddd !important;
+              margin-bottom: 20px !important;
+              padding-bottom: 10px !important;
+            }
           }
         `}
       </style>

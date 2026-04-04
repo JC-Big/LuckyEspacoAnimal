@@ -117,6 +117,7 @@ export default function Clients() {
         </Box>
         <Button 
           variant="contained" 
+          color="info"
           startIcon={<AddIcon />} 
           onClick={openAdd}
           sx={{ display: { xs: 'none', sm: 'flex' } }}
@@ -145,7 +146,7 @@ export default function Clients() {
         {filteredClients.map(c => (
           <Card key={c.id} sx={{ transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-2px)' } }}>
             <CardContent sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              <Avatar sx={{ bgcolor: 'secondary.light', width: 50, height: 50 }}>
+              <Avatar sx={{ bgcolor: 'info.light', width: 50, height: 50, color: 'info.contrastText' }}>
                 <PetsIcon />
               </Avatar>
               <Box sx={{ flex: 1 }}>
@@ -199,7 +200,7 @@ export default function Clients() {
       {/* ─── Client Dialog ──────────────────────────────── */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullScreen={isMobile} fullWidth maxWidth="sm">
         {isMobile && (
-          <AppBar sx={{ position: 'relative' }} elevation={0}>
+          <AppBar sx={{ position: 'relative', bgcolor: 'info.main' }} elevation={0}>
             <Toolbar>
               <IconButton edge="start" color="inherit" onClick={() => setDialogOpen(false)} aria-label="close">
                 <CloseIcon />
@@ -236,8 +237,8 @@ export default function Clients() {
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleSave} disabled={!form.name.trim() || !form.petName.trim()}>Salvar</Button>
+          <Button onClick={() => setDialogOpen(false)} color="info">Cancelar</Button>
+          <Button variant="contained" color="info" onClick={handleSave} disabled={!form.name.trim() || !form.petName.trim()}>Salvar</Button>
         </DialogActions>
       </Dialog>
 

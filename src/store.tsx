@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 // ── Interfaces ──────────────────────────────────────────────
 export interface Product {
   id: string;
+  shortId: string;
   name: string;
   category: string;
   minQuantity: number;
@@ -15,6 +16,7 @@ export interface Product {
 export interface ProductBatch {
   id: string;
   productId: string;
+  seqId: number;
   description: string;
   entryDate: string;
   expirationDate: string;
@@ -69,7 +71,7 @@ interface StoreContextType {
   addProduct: (p: Omit<Product, 'id' | 'createdAt' | 'seqId'>) => void;
   updateProduct: (p: Product) => void;
   deleteProduct: (id: string) => void;
-  addBatch: (b: Omit<ProductBatch, 'id'>) => void;
+  addBatch: (b: Omit<ProductBatch, 'id' | 'seqId'>) => void;
   updateBatch: (b: ProductBatch) => void;
   deleteBatch: (id: string) => void;
   addClient: (c: Omit<Client, 'id' | 'createdAt' | 'seqId'>) => void;
@@ -87,19 +89,19 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 const today = dayjs().format('YYYY-MM-DD');
 
 const initialProducts: Product[] = [
-  { id: 'p1', name: 'Ração Premium Adulto 15kg', category: 'Alimentação', minQuantity: 5, createdAt: dayjs().subtract(7, 'day').format('YYYY-MM-DD'), seqId: 1 },
-  { id: 'p2', name: 'Shampoo Neutro 500ml', category: 'Higiene', minQuantity: 5, createdAt: dayjs().subtract(6, 'day').format('YYYY-MM-DD'), seqId: 2 },
-  { id: 'p3', name: 'Coleira Antipulgas M', category: 'Acessórios', minQuantity: 3, createdAt: dayjs().subtract(5, 'day').format('YYYY-MM-DD'), seqId: 3 },
-  { id: 'p4', name: 'Brinquedo Mordedor', category: 'Brinquedos', minQuantity: 5, createdAt: dayjs().subtract(4, 'day').format('YYYY-MM-DD'), seqId: 4 },
-  { id: 'p5', name: 'Ração Gatos Filhote 3kg', category: 'Alimentação', minQuantity: 4, createdAt: dayjs().subtract(3, 'day').format('YYYY-MM-DD'), seqId: 5 },
-  { id: 'p6', name: 'Tapete Higiênico 30un', category: 'Higiene', minQuantity: 10, createdAt: dayjs().subtract(2, 'day').format('YYYY-MM-DD'), seqId: 6 },
+  { id: 'p1', shortId: 'RPA15', name: 'Ração Premium Adulto 15kg', category: 'Alimentação', minQuantity: 5, createdAt: dayjs().subtract(7, 'day').format('YYYY-MM-DD'), seqId: 1 },
+  { id: 'p2', shortId: 'SHNP5', name: 'Shampoo Neutro 500ml', category: 'Higiene', minQuantity: 5, createdAt: dayjs().subtract(6, 'day').format('YYYY-MM-DD'), seqId: 2 },
+  { id: 'p3', shortId: 'COLM', name: 'Coleira Antipulgas M', category: 'Acessórios', minQuantity: 3, createdAt: dayjs().subtract(5, 'day').format('YYYY-MM-DD'), seqId: 3 },
+  { id: 'p4', shortId: 'BRQMD', name: 'Brinquedo Mordedor', category: 'Brinquedos', minQuantity: 5, createdAt: dayjs().subtract(4, 'day').format('YYYY-MM-DD'), seqId: 4 },
+  { id: 'p5', shortId: 'RGF3', name: 'Ração Gatos Filhote 3kg', category: 'Alimentação', minQuantity: 4, createdAt: dayjs().subtract(3, 'day').format('YYYY-MM-DD'), seqId: 5 },
+  { id: 'p6', shortId: 'TAPI30', name: 'Tapete Higiênico 30un', category: 'Higiene', minQuantity: 10, createdAt: dayjs().subtract(2, 'day').format('YYYY-MM-DD'), seqId: 6 },
 ];
 
 const initialBatches: ProductBatch[] = [
-  { id: uuidv4(), productId: 'p1', description: 'Carga inicial', entryDate: dayjs().subtract(7, 'day').format('YYYY-MM-DD'), expirationDate: dayjs().add(6, 'month').format('YYYY-MM-DD'), quantity: 12 },
-  { id: uuidv4(), productId: 'p2', description: 'Carga inicial', entryDate: dayjs().subtract(6, 'day').format('YYYY-MM-DD'), expirationDate: dayjs().add(10, 'day').format('YYYY-MM-DD'), quantity: 3 },
-  { id: uuidv4(), productId: 'p5', description: 'Carga inicial', entryDate: dayjs().subtract(3, 'day').format('YYYY-MM-DD'), expirationDate: dayjs().subtract(2, 'day').format('YYYY-MM-DD'), quantity: 2 },
-  { id: uuidv4(), productId: 'p6', description: 'Carga inicial', entryDate: dayjs().subtract(2, 'day').format('YYYY-MM-DD'), expirationDate: dayjs().add(12, 'month').format('YYYY-MM-DD'), quantity: 20 },
+  { id: uuidv4(), seqId: 1, productId: 'p1', description: 'Carga inicial', entryDate: dayjs().subtract(7, 'day').format('YYYY-MM-DD'), expirationDate: dayjs().add(6, 'month').format('YYYY-MM-DD'), quantity: 12 },
+  { id: uuidv4(), seqId: 2, productId: 'p2', description: 'Carga inicial', entryDate: dayjs().subtract(6, 'day').format('YYYY-MM-DD'), expirationDate: dayjs().add(10, 'day').format('YYYY-MM-DD'), quantity: 3 },
+  { id: uuidv4(), seqId: 3, productId: 'p5', description: 'Carga inicial', entryDate: dayjs().subtract(3, 'day').format('YYYY-MM-DD'), expirationDate: dayjs().subtract(2, 'day').format('YYYY-MM-DD'), quantity: 2 },
+  { id: uuidv4(), seqId: 4, productId: 'p6', description: 'Carga inicial', entryDate: dayjs().subtract(2, 'day').format('YYYY-MM-DD'), expirationDate: dayjs().add(12, 'month').format('YYYY-MM-DD'), quantity: 20 },
 ];
 
 const initialClients: Client[] = [
@@ -142,14 +144,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setBatches(prev => prev.filter(b => b.productId !== id));
   }, []);
 
-  const addBatch = useCallback((b: Omit<ProductBatch, 'id'>) => {
-    setBatches(prev => [...prev, { ...b, id: uuidv4() }]);
+  const addBatch = useCallback((b: Omit<ProductBatch, 'id' | 'seqId'>) => {
+    setBatches(prev => {
+       const productBatches = prev.filter(batch => batch.productId === b.productId);
+       const nextSeq = productBatches.length + 1;
+       return [...prev, { ...b, id: uuidv4(), seqId: nextSeq }];
+    });
   }, []);
   const updateBatch = useCallback((b: ProductBatch) => {
     setBatches(prev => prev.map(item => (item.id === b.id ? b : item)));
   }, []);
   const deleteBatch = useCallback((id: string) => {
-    setBatches(prev => prev.filter(item => item.id !== id));
+    setBatches(prev => {
+      const batchToDelete = prev.find(item => item.id === id);
+      if (!batchToDelete) return prev;
+      
+      const filtered = prev.filter(item => item.id !== id);
+      
+      let currentSeq = 1;
+      return filtered.map(item => {
+        if (item.productId === batchToDelete.productId) {
+          return { ...item, seqId: currentSeq++ };
+        }
+        return item;
+      });
+    });
   }, []);
 
   const addClient = useCallback((c: Omit<Client, 'id' | 'createdAt' | 'seqId'>) => {

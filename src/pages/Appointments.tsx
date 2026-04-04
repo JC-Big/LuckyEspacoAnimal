@@ -165,6 +165,7 @@ export default function Appointments() {
         </Box>
         <Button
           variant="contained"
+          color="secondary"
           startIcon={<AddIcon />}
           onClick={openAdd}
           sx={{ display: { xs: 'none', sm: 'flex' } }}
@@ -180,6 +181,8 @@ export default function Appointments() {
           variant="scrollable"
           scrollButtons="auto"
           allowScrollButtonsMobile
+          textColor="secondary"
+          indicatorColor="secondary"
           sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}
         >
           <Tab label="Próximos" />
@@ -212,7 +215,7 @@ export default function Appointments() {
               key={a.id} 
               sx={{ 
                 borderLeft: '6px solid', 
-                borderColor: isToday ? 'primary.main' : 'divider',
+                borderColor: isToday ? 'secondary.main' : 'divider',
                 maxWidth: '100%'
               }}
               onClick={() => handleOpenView(a)}
@@ -233,7 +236,7 @@ export default function Appointments() {
                   {a.service}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5 }}>
-                  <CalendarMonthIcon sx={{ fontSize: 18, color: 'primary.main' }} />
+                  <CalendarMonthIcon sx={{ fontSize: 18, color: 'secondary.main' }} />
                   <Typography variant="body2" fontWeight={600}>
                     {dayjs(a.date).format('DD/MM/YYYY')} às {a.time}
                   </Typography>
@@ -358,7 +361,7 @@ export default function Appointments() {
         maxWidth="sm"
       >
         {isMobile && (
-          <AppBar sx={{ position: 'relative' }} elevation={0}>
+          <AppBar sx={{ position: 'relative', bgcolor: 'secondary.main' }} elevation={0}>
             <Toolbar>
               <IconButton edge="start" color="inherit" onClick={() => setDialogOpen(false)} aria-label="close">
                 <CloseIcon />
@@ -415,8 +418,8 @@ export default function Appointments() {
           </TextField>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleSave} disabled={!form.clientId}>
+          <Button onClick={() => setDialogOpen(false)} color="secondary">Cancelar</Button>
+          <Button variant="contained" color="secondary" onClick={handleSave} disabled={!form.clientId}>
             Agendar
           </Button>
         </DialogActions>
@@ -463,8 +466,8 @@ export default function Appointments() {
           <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: '24px !important' }}>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
               <Box sx={{
-                width: 56, height: 56, borderRadius: '50%', bgcolor: 'primary.light', 
-                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'primary.contrastText'
+                width: 56, height: 56, borderRadius: '50%', bgcolor: 'secondary.light', 
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'secondary.contrastText'
               }}>
                 <PetsIcon sx={{ fontSize: 28 }} />
               </Box>
@@ -529,7 +532,7 @@ export default function Appointments() {
           </DialogContent>
         )}
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button variant="contained" onClick={handleCloseView}>Fechar</Button>
+          <Button variant="contained" color="secondary" onClick={handleCloseView}>Fechar</Button>
         </DialogActions>
       </Dialog>
     </Box>
