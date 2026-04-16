@@ -91,6 +91,7 @@ export default function Inventory() {
       );
     }
     return list;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products, batches, filterLowStock, filterExpiring, search]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -106,6 +107,12 @@ export default function Inventory() {
 
   const [movDialogOpen, setMovDialogOpen] = useState(false);
 
+  const openAdd = () => {
+    setEditing(null);
+    setForm(emptyProduct);
+    setDialogOpen(true);
+  };
+
   useEffect(() => {
     if (searchParams.get('add') === 'true') {
       openAdd();
@@ -114,18 +121,14 @@ export default function Inventory() {
         return prev;
       });
     }
-  }, [searchParams]);
+  }, [searchParams, setSearchParams]);
   const [movProduct, setMovProduct] = useState<Product | null>(null);
   const [movType, setMovType] = useState<MovementType>('in');
   const [movQty, setMovQty] = useState(1);
   const [movReason, setMovReason] = useState('');
   const [selectedBatchId, setSelectedBatchId] = useState('');
 
-  const openAdd = () => {
-    setEditing(null);
-    setForm(emptyProduct);
-    setDialogOpen(true);
-  };
+
 
   const openEdit = (p: Product) => {
     setEditing(p);

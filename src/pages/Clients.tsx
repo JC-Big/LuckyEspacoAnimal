@@ -26,6 +26,7 @@ import {
   InputAdornment,
   Snackbar,
   Alert,
+  Fab,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -35,7 +36,6 @@ import PersonIcon from '@mui/icons-material/Person';
 import PhoneIcon from '@mui/icons-material/Phone';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
-import { useStore } from '../store';
 import type { Client } from '../store';
 
 
@@ -63,7 +63,7 @@ export default function Clients() {
   const [editing, setEditing] = useState<Client | null>(null);
   const [form, setForm] = useState(emptyClient);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [clients, setClients] = useState<any[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [snackbar, setSnackbar] = useState<{open: boolean, message: string, severity: 'success' | 'error'}>({
     open: false,
     message: '',
@@ -74,7 +74,7 @@ export default function Clients() {
     setSnackbar({ open: true, message, severity });
   };
 
-  const handleCloseSnackbar = (event?: React.SyntheticEvent | Event, reason?: string) => {
+  const handleCloseSnackbar = (_event?: React.SyntheticEvent | Event, reason?: string) => {
     if (reason === 'clickaway') return;
     setSnackbar(prev => ({ ...prev, open: false }));
   };
@@ -88,7 +88,7 @@ export default function Clients() {
       const data = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      } as Client));
 
       console.log("Dados do Firebase:", data);
 
@@ -102,6 +102,12 @@ export default function Clients() {
   useEffect(() => {
     fetchClients();
   }, []);
+
+  const openAdd = () => {
+    setEditing(null);
+    setForm(emptyClient);
+    setDialogOpen(true);
+  };
 
   useEffect(() => {
     if (searchParams.get('add') === 'true') {
@@ -123,11 +129,7 @@ export default function Clients() {
     );
   }, [clients, search]);
 
-  const openAdd = () => {
-    setEditing(null);
-    setForm(emptyClient);
-    setDialogOpen(true);
-  };
+
 
   const openEdit = (client: Client) => {
     setEditing(client);
@@ -202,6 +204,18 @@ export default function Clients() {
         >
           Novo Cliente
         </Button>
+        <IconButton
+          color="info"
+          onClick={openAdd}
+          sx={{ 
+            display: { xs: 'flex', sm: 'none' }, 
+            bgcolor: 'info.main', 
+            color: 'white', 
+            '&:hover': { bgcolor: 'info.dark' } 
+          }}
+        >
+          <AddIcon />
+        </IconButton>
       </Box>
 
       <Card sx={{ mb: 4, p: 2 }}>
@@ -333,6 +347,24 @@ export default function Clients() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* ─── Mobile FAB ───────────────────────────────── */}
+      {isMobile && (
+        <Fab
+          color="info"
+          aria-label="add"
+          onClick={openAdd}
+          sx={{
+            position: 'fixed',
+            bottom: 88,
+            right: 16,
+            zIndex: theme.zIndex.speedDial || 1050,
+            '@media print': { display: 'none' }
+          }}
+        >
+          <AddIcon />
+        </Fab>
+      )}
 
       {/* ─── Snackbar Notification ──────────────────────── */}
       <Snackbar

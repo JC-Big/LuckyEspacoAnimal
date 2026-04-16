@@ -37,7 +37,7 @@ export default function Login({ onLogin }: LoginProps) {
     setSnackbar({ open: true, message, severity });
   };
 
-  const handleCloseSnackbar = (event?: React.SyntheticEvent | Event, reason?: string) => {
+  const handleCloseSnackbar = (_event?: React.SyntheticEvent | Event, reason?: string) => {
     if (reason === 'clickaway') return;
     setSnackbar(prev => ({ ...prev, open: false }));
   };
@@ -60,8 +60,9 @@ export default function Login({ onLogin }: LoginProps) {
       onLogin(); // mantém seu fluxo atual (provavelmente redireciona)
     }, 1000);
 
-  } catch (error: any) {
-    console.error("Erro no login:", error.message);
+  } catch (error) {
+    const err = error as Error;
+    console.error("Erro no login:", err.message);
     showSnackbar("Email ou senha inválidos", "error");
   }
 };

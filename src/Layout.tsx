@@ -282,7 +282,7 @@ export default function Layout() {
       )}
 
       {/* Global Quick Action FAB (Mobile Only) */}
-      {isMobile && (
+      {isMobile && location.pathname === '/' && (
         <SpeedDial
           ariaLabel="Ações Rápidas"
           sx={{ 

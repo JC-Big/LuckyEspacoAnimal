@@ -47,7 +47,7 @@ export default function Reports() {
   const [sortBy, setSortBy] = useState<SortType>('nome');
   const [apptStatusPattern, setApptStatusPattern] = useState('todos');
 
-  const [reportData, setReportData] = useState<any[] | null>(null);
+  const [reportData, setReportData] = useState<Array<Product | Client | Appointment | ProductBatch> | null>(null);
   const printAreaRef = useRef<HTMLDivElement>(null);
 
   const getClientData = (id: string) => clients.find(c => c.id === id);
@@ -57,14 +57,14 @@ export default function Reports() {
     const end = dayjs(endDate).endOf('day');
 
     if (category === 'estoque') {
-      let result = products.filter(p => dayjs(p.createdAt).isBetween(start, end, null, '[]'));
+      const result = products.filter(p => dayjs(p.createdAt).isBetween(start, end, null, '[]'));
       if (sortBy === 'nome') result.sort((a, b) => a.name.localeCompare(b.name));
       if (sortBy === 'data') result.sort((a, b) => dayjs(b.createdAt).diff(dayjs(a.createdAt)));
       if (sortBy === 'id') result.sort((a, b) => a.seqId - b.seqId);      
       setReportData(result);
     } 
     else if (category === 'clientes') {
-      let result = clients.filter(c => dayjs(c.createdAt).isBetween(start, end, null, '[]'));
+      const result = clients.filter(c => dayjs(c.createdAt).isBetween(start, end, null, '[]'));
       if (sortBy === 'nome') result.sort((a, b) => a.name.localeCompare(b.name));
       if (sortBy === 'data') result.sort((a, b) => dayjs(b.createdAt).diff(dayjs(a.createdAt)));
       if (sortBy === 'id') result.sort((a, b) => a.seqId - b.seqId);      
@@ -84,7 +84,7 @@ export default function Reports() {
       setReportData(result);
     } 
     else if (category === 'vencimentos') {
-      let result = batches.filter(b => dayjs(b.expirationDate).isBetween(start, end, null, '[]'));
+      const result = batches.filter(b => dayjs(b.expirationDate).isBetween(start, end, null, '[]'));
       // Always sort by expiration date ascending (nearest first)
       result.sort((a, b) => dayjs(a.expirationDate).diff(dayjs(b.expirationDate)));
       setReportData(result);

@@ -82,6 +82,11 @@ export default function Appointments() {
   const [form, setForm] = useState(emptyForm);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  const openAdd = () => {
+    setForm(emptyForm);
+    setDialogOpen(true);
+  };
+
   useEffect(() => {
     if (searchParams.get('add') === 'true') {
       openAdd();
@@ -99,7 +104,7 @@ export default function Appointments() {
         return prev;
       });
     }
-  }, [searchParams, appointments]);
+  }, [searchParams, appointments, setSearchParams]);
 
   const getClientName = (id: string) => {
     const c = clients.find(cl => cl.id === id);
@@ -126,10 +131,7 @@ export default function Appointments() {
     return list;
   }, [appointments, search, tabIndex, clients]);
 
-  const openAdd = () => {
-    setForm(emptyForm);
-    setDialogOpen(true);
-  };
+
 
   const handleSave = () => {
     if (!form.clientId) return;
@@ -177,7 +179,7 @@ export default function Appointments() {
       <Card sx={{ mb: 4 }}>
         <Tabs
           value={tabIndex}
-          onChange={(_: any, v: number) => setTabIndex(v)}
+          onChange={(_: React.SyntheticEvent, v: number) => setTabIndex(v)}
           variant="scrollable"
           scrollButtons="auto"
           allowScrollButtonsMobile
