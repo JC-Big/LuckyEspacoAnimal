@@ -1,3 +1,6 @@
+import { collection, getDocs, addDoc } from "firebase/firestore";
+import { doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { db } from "../firebase/db";
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -21,6 +24,8 @@ import {
   useTheme,
   Avatar,
   InputAdornment,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -32,6 +37,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import { useStore } from '../store';
 import type { Client } from '../store';
+
 
 const speciesList = ['Cachorro', 'Gato', 'Aves', 'Roedores', 'Outros'];
 
@@ -51,13 +57,51 @@ export default function Clients() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [searchParams, setSearchParams] = useSearchParams();
-  const { clients, addClient, updateClient, deleteClient } = useStore();
 
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Client | null>(null);
   const [form, setForm] = useState(emptyClient);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [clients, setClients] = useState<any[]>([]);
+  const [snackbar, setSnackbar] = useState<{open: boolean, message: string, severity: 'success' | 'error'}>({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+
+  const showSnackbar = (message: string, severity: 'success' | 'error' = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleCloseSnackbar = (event?: React.SyntheticEvent | Event, reason?: string) => {
+    if (reason === 'clickaway') return;
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
+  const fetchClients = async () => { 
+    try {
+      console.log("Buscando clientes...");
+
+      const querySnapshot = await getDocs(collection(db, "clients"));
+
+      const data = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      console.log("Dados do Firebase:", data);
+
+      setClients(data);
+
+    } catch (error) {
+      console.error("Erro ao buscar clientes:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchClients();
+  }, []);
 
   useEffect(() => {
     if (searchParams.get('add') === 'true') {
@@ -91,20 +135,54 @@ export default function Clients() {
     setDialogOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim() || !form.petName.trim()) return;
-    if (editing) {
-      updateClient({ ...editing, ...form });
-    } else {
-      addClient(form);
+
+    try {
+      const clientData = {
+        name: form.name,
+        petName: form.petName,
+        phone: form.phone,
+        petSpecies: form.petSpecies,
+        petBreed: form.petBreed,
+        addressStreet: form.addressStreet,
+        addressNumber: form.addressNumber,
+        addressNeighborhood: form.addressNeighborhood,
+        addressCity: form.addressCity,
+      };
+
+      if (editing) {
+        const clientRef = doc(db, "clients", editing.id);
+        await updateDoc(clientRef, clientData);
+        showSnackbar("Cliente atualizado 🚀");
+      } else {
+        await addDoc(collection(db, "clients"), clientData);
+        showSnackbar("Cliente adicionado 🚀");
+      }
+      
+      setDialogOpen(false); // fecha modal imediatamente
+      await fetchClients(); // atualiza lista
+
+    } catch (error) {
+      console.error("Erro ao salvar cliente:", error);
+      showSnackbar("Erro ao salvar cliente", "error");
     }
-    setDialogOpen(false);
   };
 
-  const handleDelete = () => {
-    if (deleteId) {
-      deleteClient(deleteId);
-      setDeleteId(null);
+  const handleDelete = async () => {
+    if (!deleteId) return;
+
+    try {
+      const clientRef = doc(db, "clients", deleteId);
+      await deleteDoc(clientRef);
+      
+      showSnackbar("Cliente deletado 🗑️");
+      setDeleteId(null); // fecha modal imediatamente
+      await fetchClients();
+
+    } catch (error) {
+      console.error("Erro ao deletar cliente:", error);
+      showSnackbar("Erro ao deletar cliente", "error");
     }
   };
 
@@ -255,6 +333,18 @@ export default function Clients() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* ─── Snackbar Notification ──────────────────────── */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }} variant="filled">
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

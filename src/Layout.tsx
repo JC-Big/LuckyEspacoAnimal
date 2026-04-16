@@ -28,6 +28,11 @@ import PetsIcon from '@mui/icons-material/Pets';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import AddIcon from '@mui/icons-material/Add';
 import ReceiptIcon from '@mui/icons-material/Receipt';
+import LogoutIcon from '@mui/icons-material/Logout';
+import PersonIcon from '@mui/icons-material/Person';
+import IconButton from '@mui/material/IconButton';
+import { signOut } from 'firebase/auth';
+import { auth } from './firebase/auth';
 
 const DRAWER_WIDTH = 260;
 
@@ -121,9 +126,27 @@ export default function Layout() {
         })}
       </List>
 
+      {/* User Profile / Logout */}
+      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1.5, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
+        <Avatar src={auth.currentUser?.photoURL || ''} sx={{ width: 40, height: 40, bgcolor: 'primary.light' }}>
+          <PersonIcon />
+        </Avatar>
+        <Box sx={{ flex: 1, overflow: 'hidden' }}>
+          <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>
+            {auth.currentUser?.displayName || 'Usuário Luck'}
+          </Typography>
+          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }} noWrap>
+            {auth.currentUser?.email || 'admin@luckyanimal.com'}
+          </Typography>
+        </Box>
+        <IconButton size="small" color="error" title="Sair" onClick={() => signOut(auth)}>
+          <LogoutIcon fontSize="small" />
+        </IconButton>
+      </Box>
+
       {/* Footer */}
-      <Box sx={{ p: 2, textAlign: 'center' }}>
-        <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+      <Box sx={{ p: 1, textAlign: 'center', bgcolor: 'background.default' }}>
+        <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.7rem' }}>
           © 2026 Lucky Animal
         </Typography>
       </Box>

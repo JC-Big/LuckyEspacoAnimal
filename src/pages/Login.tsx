@@ -1,3 +1,5 @@
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../firebase/auth";
 import React, { useState } from 'react';
 import {
   Box,
@@ -6,7 +8,9 @@ import {
   Typography,
   InputAdornment,
   IconButton,
-  Fade
+  Fade,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import PetsIcon from '@mui/icons-material/Pets';
 import Visibility from '@mui/icons-material/Visibility';
@@ -23,13 +27,44 @@ export default function Login({ onLogin }: LoginProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [snackbar, setSnackbar] = useState<{open: boolean, message: string, severity: 'success' | 'error'}>({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (email && password) {
-      onLogin();
-    }
+  const showSnackbar = (message: string, severity: 'success' | 'error' = 'success') => {
+    setSnackbar({ open: true, message, severity });
   };
+
+  const handleCloseSnackbar = (event?: React.SyntheticEvent | Event, reason?: string) => {
+    if (reason === 'clickaway') return;
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  try {
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
+
+    console.log("Usuário logado:", userCredential.user);
+
+    showSnackbar("Login realizado com sucesso!", "success");
+    // Pequeno delay para exibir o card antes de redirecionar
+    setTimeout(() => {
+      onLogin(); // mantém seu fluxo atual (provavelmente redireciona)
+    }, 1000);
+
+  } catch (error: any) {
+    console.error("Erro no login:", error.message);
+    showSnackbar("Email ou senha inválidos", "error");
+  }
+};
 
   return (
     <Box sx={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
@@ -182,6 +217,18 @@ export default function Login({ onLogin }: LoginProps) {
           </Box>
         </Fade>
       </Box>
+
+      {/* ─── Snackbar Notification ──────────────────────── */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }} variant="filled">
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

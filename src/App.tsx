@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, CssBaseline } from '@mui/material';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './firebase/auth';
+import { ThemeProvider, CssBaseline, Box } from '@mui/material';
 import theme from './theme';
 import { StoreProvider } from './store';
 import Layout from './Layout';
@@ -10,10 +12,30 @@ import Clients from './pages/Clients';
 import Appointments from './pages/Appointments';
 import Reports from './pages/Reports';
 import Login from './pages/Login';
+import { CircularProgress } from '@mui/material';
 
 export default function App() {
-  // Simple auth state for demonstration
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setIsAuthenticated(!!user);
+      setLoadingAuth(false);
+    });
+    return () => unsub();
+  }, []);
+
+  if (loadingAuth) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Box sx={{ display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center' }}>
+          <CircularProgress color="primary" />
+        </Box>
+      </ThemeProvider>
+    );
+  }
 
   return (
     <ThemeProvider theme={theme}>
