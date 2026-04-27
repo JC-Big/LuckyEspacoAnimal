@@ -1,12 +1,14 @@
-import type { ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Card, CardContent, CardActionArea, Typography, Grid, Paper } from '@mui/material';
+import { Box, Card, CardContent, CardActionArea, Typography, Grid, Paper, Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton, List, ListItem, ListItemText, Divider } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import InventoryIcon from '@mui/icons-material/Inventory2';
 import WarningIcon from '@mui/icons-material/Warning';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import PeopleIcon from '@mui/icons-material/People';
 import dayjs from 'dayjs';
-import { useStore } from '../store';
+import { db } from '../firebase/db';
+import { collection, getDocs } from 'firebase/firestore';
 
 interface SummaryCardProps {
   title: string;
@@ -74,7 +76,79 @@ function SummaryCard({ title, value, icon, color, bgColor, onClick }: SummaryCar
 }
 
 export default function Dashboard() {
-  const { products, batches, appointments, clients } = useStore();
+  const [products, setProducts] = useState<any[]>([]);
+  const [batches, setBatches] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
+
+  const [expiredAlertOpen, setExpiredAlertOpen] = useState(false);
+  const [overdueAlertOpen, setOverdueAlertOpen] = useState(false);
+  const [expiredItems, setExpiredItems] = useState<any[]>([]);
+  const [overdueItems, setOverdueItems] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [productsSnap, batchesSnap, appointmentsSnap, clientsSnap] = await Promise.all([
+          getDocs(collection(db, "products")),
+          getDocs(collection(db, "batches")),
+          getDocs(collection(db, "appointments")),
+          getDocs(collection(db, "clients"))
+        ]);
+
+        const prods = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+        const bats = batchesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+        const apps = appointmentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+        const clis = clientsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+
+        setProducts(prods);
+        setBatches(bats);
+        setAppointments(apps);
+        setClients(clis);
+
+        const expiredList: any[] = [];
+        bats.forEach(b => {
+          if (b.expirationDate && dayjs(b.expirationDate).diff(dayjs(), 'day') <= 0) {
+            const p = prods.find(p => p.id === b.productId);
+            if (p) expiredList.push({ product: p, batch: b });
+          }
+        });
+
+        const overdueList = apps.filter(a => {
+          if (a.status !== 'agendado') return false;
+          if (!a.date || !a.time) return false;
+          return dayjs(`${a.date}T${a.time}`).isBefore(dayjs());
+        });
+
+        setExpiredItems(expiredList);
+        setOverdueItems(overdueList);
+
+        if (!sessionStorage.getItem('dashboardAlertsShown')) {
+          if (expiredList.length > 0) {
+            setExpiredAlertOpen(true);
+          } else if (overdueList.length > 0) {
+            setOverdueAlertOpen(true);
+          }
+          sessionStorage.setItem('dashboardAlertsShown', 'true');
+        }
+      } catch (error) {
+        console.error("Erro ao buscar dados do Dashboard:", error);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const handleCloseExpired = () => {
+    setExpiredAlertOpen(false);
+    if (overdueItems.length > 0) {
+      setOverdueAlertOpen(true);
+    }
+  };
+
+  const handleCloseOverdue = () => {
+    setOverdueAlertOpen(false);
+  };
+
   const navigate = useNavigate();
   const today = dayjs().format('YYYY-MM-DD');
 
@@ -85,7 +159,12 @@ export default function Dashboard() {
       .reduce((sum, b) => sum + b.quantity, 0);
     return totalQty <= p.minQuantity;
   }).length;
-  const expiring = batches.filter(b => b.expirationDate && dayjs(b.expirationDate).diff(dayjs(today), 'day') <= 30).length;
+  const expiring = products.filter(p => {
+    const pBatches = batches.filter(b => b.productId === p.id && b.expirationDate);
+    if (pBatches.length === 0) return false;
+    const earliest = pBatches.sort((a, b) => dayjs(a.expirationDate).diff(dayjs(b.expirationDate)))[0].expirationDate;
+    return dayjs(earliest).diff(dayjs(today), 'day') <= 30;
+  }).length;
   const todayAppointments = appointments.filter(a => a.date === today).length;
   const totalClients = clients.length;
 
@@ -196,6 +275,91 @@ export default function Dashboard() {
           </Grid>
         )}
       </Grid>
+
+      {/* Expired Products Dialog */}
+      <Dialog open={expiredAlertOpen} onClose={handleCloseExpired} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'error.main', color: 'white' }}>
+          <Typography variant="h6" fontWeight={700}>Aviso de Vencimento</Typography>
+          <IconButton color="inherit" onClick={handleCloseExpired} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Typography variant="body1" sx={{ mb: 2, mt: 1, fontWeight: 500 }}>
+            Os seguintes produtos estão vencendo hoje, ou já venceram! Favor verificar os mesmos:
+          </Typography>
+          <List sx={{ bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+            {expiredItems.map((item, i) => (
+              <Box key={i}>
+                {i > 0 && <Divider />}
+                <ListItem>
+                  <ListItemText
+                    primary={<Typography fontWeight={700}>{item.product.name}</Typography>}
+                    secondary={`Cód. Produto: ${item.product.shortId} | Lote: ${item.batch.description || 'Lote Único'} | Val: ${dayjs(item.batch.expirationDate).format('DD/MM/YYYY')}`}
+                  />
+                </ListItem>
+              </Box>
+            ))}
+          </List>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button onClick={handleCloseExpired} color="inherit">Fechar</Button>
+          <Button 
+            variant="contained" 
+            color="error" 
+            onClick={() => {
+              handleCloseExpired();
+              navigate('/inventory?filter=expired');
+            }}
+          >
+            Verificar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Overdue Appointments Dialog */}
+      <Dialog open={overdueAlertOpen} onClose={handleCloseOverdue} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'warning.main', color: 'white' }}>
+          <Typography variant="h6" fontWeight={700}>Agendamentos Pendentes</Typography>
+          <IconButton color="inherit" onClick={handleCloseOverdue} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Typography variant="body1" sx={{ mb: 2, mt: 1, fontWeight: 500 }}>
+            Alguns agendamentos já passaram da data e não foram atualizados. Favor ajustá-los para organização do sistema:
+          </Typography>
+          <List sx={{ bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+            {overdueItems.map((a, i) => {
+              const client = clients.find(c => c.id === a.clientId);
+              return (
+                <Box key={a.id}>
+                  {i > 0 && <Divider />}
+                  <ListItem>
+                    <ListItemText
+                      primary={<Typography fontWeight={700}>{client?.petName || 'Pet'} — {client?.name || 'Tutor'}</Typography>}
+                      secondary={`${a.service} | Data: ${dayjs(a.date).format('DD/MM/YYYY')} às ${a.time}`}
+                    />
+                  </ListItem>
+                </Box>
+              );
+            })}
+          </List>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button onClick={handleCloseOverdue} color="inherit">Fechar</Button>
+          <Button 
+            variant="contained" 
+            color="warning" 
+            onClick={() => {
+              handleCloseOverdue();
+              navigate('/appointments?filter=overdue');
+            }}
+          >
+            Verificar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

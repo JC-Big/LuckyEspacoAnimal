@@ -1,6 +1,6 @@
 import { collection, getDocs, addDoc } from "firebase/firestore";
 import { doc, updateDoc, deleteDoc } from "firebase/firestore";
-import { db } from "../firebase/db";
+import { db } from "../firebase/config";
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -27,6 +27,7 @@ import {
   Snackbar,
   Alert,
   Fab,
+  Paper,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -36,6 +37,8 @@ import PersonIcon from '@mui/icons-material/Person';
 import PhoneIcon from '@mui/icons-material/Phone';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import type { Client } from '../store';
 
 
@@ -63,6 +66,7 @@ export default function Clients() {
   const [editing, setEditing] = useState<Client | null>(null);
   const [form, setForm] = useState(emptyClient);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [viewedClient, setViewedClient] = useState<Client | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [snackbar, setSnackbar] = useState<{open: boolean, message: string, severity: 'success' | 'error'}>({
     open: false,
@@ -236,7 +240,7 @@ export default function Clients() {
 
       <Stack spacing={2} sx={{ pb: 10 }}>
         {filteredClients.map(c => (
-          <Card key={c.id} sx={{ transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-2px)' } }}>
+          <Card key={c.id} onClick={() => setViewedClient(c)} sx={{ cursor: 'pointer', transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-2px)' } }}>
             <CardContent sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
               <Avatar sx={{ bgcolor: 'info.light', width: 50, height: 50, color: 'info.contrastText' }}>
                 <PetsIcon />
@@ -345,6 +349,82 @@ export default function Clients() {
           <Button variant="contained" color="error" onClick={handleDelete}>
             Excluir
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ─── Details Dialog ─────────────────────────────── */}
+      <Dialog
+        open={!!viewedClient}
+        onClose={() => setViewedClient(null)}
+        fullScreen={isMobile}
+        fullWidth
+        maxWidth="sm"
+      >
+        {isMobile && (
+          <AppBar sx={{ position: 'relative', bgcolor: 'info.main' }} elevation={0}>
+            <Toolbar>
+              <IconButton edge="start" color="inherit" onClick={() => setViewedClient(null)} aria-label="close">
+                <ArrowBackIcon />
+              </IconButton>
+              <Typography sx={{ ml: 2, flex: 1, fontWeight: 700 }} variant="h6">
+                Detalhes do Cliente
+              </Typography>
+            </Toolbar>
+          </AppBar>
+        )}
+        <DialogTitle sx={{ fontWeight: 700, display: { xs: 'none', sm: 'block' } }}>
+          Detalhes do Cliente
+        </DialogTitle>
+        {viewedClient && (
+          <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: '24px !important' }}>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <Box sx={{
+                width: 56, height: 56, borderRadius: '50%', bgcolor: 'info.light', 
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'info.contrastText'
+              }}>
+                <PetsIcon sx={{ fontSize: 28 }} />
+              </Box>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+                  {viewedClient.petName}
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  {viewedClient.petSpecies || 'Não informado'} {viewedClient.petBreed ? `• Raça: ${viewedClient.petBreed}` : ''}
+                </Typography>
+              </Box>
+            </Box>
+
+            <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <PersonIcon color="action" />
+                <Box>
+                  <Typography variant="caption" color="text.secondary" display="block">Tutor</Typography>
+                  <Typography variant="body2" fontWeight={600}>{viewedClient.name}</Typography>
+                </Box>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <PhoneIcon color="action" />
+                <Box>
+                  <Typography variant="caption" color="text.secondary" display="block">Telefone</Typography>
+                  <Typography variant="body2" fontWeight={600}>{viewedClient.phone}</Typography>
+                </Box>
+              </Box>
+              {viewedClient.addressStreet && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <LocationOnIcon color="action" />
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" display="block">Endereço</Typography>
+                    <Typography variant="body2" fontWeight={600}>
+                      {viewedClient.addressStreet}, {viewedClient.addressNumber} - {viewedClient.addressNeighborhood}, {viewedClient.addressCity}
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
+            </Paper>
+          </DialogContent>
+        )}
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button variant="contained" color="info" onClick={() => setViewedClient(null)}>Fechar</Button>
         </DialogActions>
       </Dialog>
 

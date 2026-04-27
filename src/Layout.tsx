@@ -1,4 +1,5 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import {
   AppBar,
   Box,
@@ -19,6 +20,12 @@ import {
   SpeedDial,
   SpeedDialAction,
   SpeedDialIcon,
+  Badge,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
 } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import InventoryIcon from '@mui/icons-material/Inventory2';
@@ -33,6 +40,11 @@ import PersonIcon from '@mui/icons-material/Person';
 import IconButton from '@mui/material/IconButton';
 import { signOut } from 'firebase/auth';
 import { auth } from './firebase/auth';
+import { db } from './firebase/db';
+import { collection, onSnapshot } from 'firebase/firestore';
+import dayjs from 'dayjs';
+import NotificationsIcon from '@mui/icons-material/Notifications';
+import CloseIcon from '@mui/icons-material/Close';
 
 const DRAWER_WIDTH = 260;
 
@@ -53,6 +65,44 @@ export default function Layout() {
   const handleNav = (path: string) => {
     navigate(path);
   };
+
+  const [products, setProducts] = useState<any[]>([]);
+  const [batches, setBatches] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  useEffect(() => {
+    const unsubProducts = onSnapshot(collection(db, "products"), snap => {
+      setProducts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
+    });
+    const unsubBatches = onSnapshot(collection(db, "batches"), snap => {
+      setBatches(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
+    });
+    const unsubAppointments = onSnapshot(collection(db, "appointments"), snap => {
+      setAppointments(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
+    });
+    const unsubClients = onSnapshot(collection(db, "clients"), snap => {
+      setClients(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
+    });
+
+    return () => {
+      unsubProducts();
+      unsubBatches();
+      unsubAppointments();
+      unsubClients();
+    };
+  }, []);
+
+  const expiredBatches = batches.filter(b => b.expirationDate && dayjs(b.expirationDate).diff(dayjs(), 'day') <= 0);
+  const expiringBatches = batches.filter(b => b.expirationDate && dayjs(b.expirationDate).diff(dayjs(), 'day') > 0 && dayjs(b.expirationDate).diff(dayjs(), 'day') <= 30);
+  const overdueAppointments = appointments.filter(a => {
+    if (a.status !== 'agendado') return false;
+    if (!a.date || !a.time) return false;
+    return dayjs(`${a.date}T${a.time}`).isBefore(dayjs());
+  });
+
+  const totalNotifications = expiredBatches.length + expiringBatches.length + overdueAppointments.length;
 
   const drawerContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -125,6 +175,32 @@ export default function Layout() {
           );
         })}
       </List>
+
+      {/* Notifications Menu Item */}
+      <Box sx={{ px: 1.5, pb: 2 }}>
+        <ListItemButton
+          onClick={() => setNotificationsOpen(true)}
+          sx={{
+            borderRadius: 2,
+            bgcolor: totalNotifications > 0 ? 'error.50' : 'transparent',
+            color: totalNotifications > 0 ? 'error.main' : 'text.primary',
+            '&:hover': {
+              bgcolor: totalNotifications > 0 ? 'error.100' : 'action.hover',
+            },
+            transition: 'all 0.2s ease',
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 40, color: totalNotifications > 0 ? 'error.main' : 'inherit' }}>
+            <Badge badgeContent={totalNotifications} color="error">
+              <NotificationsIcon />
+            </Badge>
+          </ListItemIcon>
+          <ListItemText
+            primary="Alertas e Avisos"
+            primaryTypographyProps={{ fontWeight: 700, fontSize: '0.95rem' }}
+          />
+        </ListItemButton>
+      </Box>
 
       {/* User Profile / Logout */}
       <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1.5, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
@@ -311,6 +387,98 @@ export default function Layout() {
           ))}
         </SpeedDial>
       )}
+
+      {/* Notifications Dialog */}
+      <Dialog open={notificationsOpen} onClose={() => setNotificationsOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6" fontWeight={700}>Central de Notificações</Typography>
+          <IconButton onClick={() => setNotificationsOpen(false)} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {totalNotifications === 0 && (
+            <Typography variant="body1" textAlign="center" color="text.secondary" py={4}>
+              Nenhuma notificação no momento. Tudo certo! 🎉
+            </Typography>
+          )}
+
+          {expiredBatches.length > 0 && (
+            <Paper variant="outlined" sx={{ p: 2, borderColor: 'error.main', bgcolor: 'error.50' }}>
+              <Typography variant="subtitle1" fontWeight={700} color="error.main" mb={1}>
+                {expiredBatches.length} Produto(s) Vencido(s)
+              </Typography>
+              {expiredBatches.map(b => {
+                const p = products.find(prod => prod.id === b.productId);
+                return (
+                  <Typography key={b.id} variant="body2" mb={0.5}>
+                    • <b>{p?.name}</b> (Lote: {b.description || 'Único'}) — Val: {dayjs(b.expirationDate).format('DD/MM/YYYY')}
+                  </Typography>
+                );
+              })}
+              <Button 
+                variant="outlined" 
+                color="error" 
+                size="small" 
+                sx={{ mt: 1 }}
+                onClick={() => { setNotificationsOpen(false); navigate('/inventory?filter=expired'); }}
+              >
+                Verificar Estoque
+              </Button>
+            </Paper>
+          )}
+
+          {expiringBatches.length > 0 && (
+            <Paper variant="outlined" sx={{ p: 2, borderColor: 'warning.main', bgcolor: 'warning.50' }}>
+              <Typography variant="subtitle1" fontWeight={700} color="warning.main" mb={1}>
+                {expiringBatches.length} Produto(s) Vencendo
+              </Typography>
+              {expiringBatches.map(b => {
+                const p = products.find(prod => prod.id === b.productId);
+                return (
+                  <Typography key={b.id} variant="body2" mb={0.5}>
+                    • <b>{p?.name}</b> (Lote: {b.description || 'Único'}) — Val: {dayjs(b.expirationDate).format('DD/MM/YYYY')}
+                  </Typography>
+                );
+              })}
+              <Button 
+                variant="outlined" 
+                color="warning" 
+                size="small" 
+                sx={{ mt: 1 }}
+                onClick={() => { setNotificationsOpen(false); navigate('/inventory?filter=expiring'); }}
+              >
+                Verificar Estoque
+              </Button>
+            </Paper>
+          )}
+
+          {overdueAppointments.length > 0 && (
+            <Paper variant="outlined" sx={{ p: 2, borderColor: 'secondary.main', bgcolor: 'secondary.50' }}>
+              <Typography variant="subtitle1" fontWeight={700} color="secondary.main" mb={1}>
+                {overdueAppointments.length} Agendamento(s) Pendente(s)
+              </Typography>
+              {overdueAppointments.map(a => {
+                const c = clients.find(cli => cli.id === a.clientId);
+                return (
+                  <Typography key={a.id} variant="body2" mb={0.5}>
+                    • <b>{c?.petName}</b> ({a.service}) — Marcado p/ {dayjs(a.date).format('DD/MM/YYYY')} às {a.time}
+                  </Typography>
+                );
+              })}
+              <Button 
+                variant="outlined" 
+                color="secondary" 
+                size="small" 
+                sx={{ mt: 1 }}
+                onClick={() => { setNotificationsOpen(false); navigate('/appointments?filter=overdue'); }}
+              >
+                Verificar Agendamentos
+              </Button>
+            </Paper>
+          )}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }

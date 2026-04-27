@@ -1,3 +1,6 @@
+import { db } from "../firebase/db";
+import { collection, getDocs, addDoc } from "firebase/firestore";
+import { doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -30,6 +33,8 @@ import {
   Tooltip,
   InputAdornment,
   Grid,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -58,7 +63,26 @@ export default function Inventory() {
   const [searchParams, setSearchParams] = useSearchParams();
   const filterLowStock = searchParams.get('filter') === 'low-stock';
   const filterExpiring = searchParams.get('filter') === 'expiring';
-  const { products, batches, addProduct, updateProduct, deleteProduct, addBatch, updateBatch, deleteBatch, addMovement } = useStore();
+  const filterExpired = searchParams.get('filter') === 'expired';
+  //const { products, batches, addProduct, updateProduct, deleteProduct, addBatch, updateBatch, deleteBatch, addMovement } = useStore();
+  //const { batches, addBatch, updateBatch, deleteBatch, addMovement } = useStore();
+  const { addMovement } = useStore();
+  const [batches, setBatches] = useState<any[]>([]);
+
+  const [snackbar, setSnackbar] = useState<{open: boolean, message: string, severity: 'success' | 'error'}>({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+
+  const showSnackbar = (message: string, severity: 'success' | 'error' = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleCloseSnackbar = (_event?: React.SyntheticEvent | Event, reason?: string) => {
+    if (reason === 'clickaway') return;
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
 
   const [search, setSearch] = useState('');
 
@@ -72,6 +96,8 @@ export default function Inventory() {
     return pBatches.sort((a, b) => dayjs(a.expirationDate).diff(dayjs(b.expirationDate)))[0].expirationDate;
   };
 
+  const [products, setProducts] = useState<any[]>([]);
+
   const filteredProducts = useMemo(() => {
     let list = products;
     if (filterLowStock) {
@@ -81,6 +107,12 @@ export default function Inventory() {
       list = list.filter(p => {
         const earliest = getProductExpiration(p.id);
         return earliest && dayjs(earliest).diff(dayjs(), 'day') <= 30;
+      });
+    }
+    if (filterExpired) {
+      list = list.filter(p => {
+        const earliest = getProductExpiration(p.id);
+        return earliest && dayjs(earliest).diff(dayjs(), 'day') <= 0;
       });
     }
     if (search.trim()) {
@@ -98,6 +130,51 @@ export default function Inventory() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState(emptyProduct);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const fetchProducts = async () => {
+    try {
+      console.log("Buscando produtos...");
+
+      const querySnapshot = await getDocs(collection(db, "products"));
+
+      const data = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      console.log("Produtos:", data);
+
+        setProducts(data);
+
+    } catch (error) {
+      console.error("Erro ao buscar produtos:", error);
+    }
+  };
+
+  const fetchBatches = async () => {
+    try {
+      console.log("Buscando lotes...");
+
+      const querySnapshot = await getDocs(collection(db, "batches"));
+
+      const data = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      console.log("Lotes:", data);
+
+      setBatches(data);
+
+    } catch (error) {
+      console.error("Erro ao buscar lotes:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+    fetchBatches();
+  }, []);
 
   // Batches Modal State
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -141,13 +218,34 @@ export default function Inventory() {
     setBatchesDialogOpen(true);
   };
 
-  const handleSave = () => {
-    if (editing) {
-      updateProduct({ ...editing, ...form });
-    } else {
-      addProduct(form);
+  const handleSave = async () => {
+      try {
+      if (editing) {
+        const productRef = doc(db, "products", editing.id);
+
+        await updateDoc(productRef, {
+          shortId: form.shortId,
+            name: form.name,
+          category: form.category,
+          minQuantity: form.minQuantity,
+        });
+
+      } else {
+          await addDoc(collection(db, "products"), {
+          shortId: form.shortId,
+          name: form.name,
+          category: form.category,
+          minQuantity: form.minQuantity,
+          createdAt: new Date(),
+        });
+      }
+
+      await fetchProducts();
+      setDialogOpen(false);
+
+    } catch (error) {
+      console.error("Erro ao salvar produto:", error);
     }
-    setDialogOpen(false);
   };
 
   const openMovement = (p: Product, type: MovementType) => {
@@ -159,22 +257,68 @@ export default function Inventory() {
     setMovDialogOpen(true);
   };
 
-  const handleMovement = () => {
+  const handleMovement = async () => {
     if (!movProduct || (movType === 'out' && !selectedBatchId)) return;
-    addMovement({
-      productId: movProduct.id,
-      batchId: selectedBatchId || undefined,
-      type: movType,
-      quantity: movQty,
-      date: dayjs().format('YYYY-MM-DD'),
-      reason: movReason || (movType === 'in' ? 'Entrada de estoque' : 'Saída de estoque'),
-    });
-    setMovDialogOpen(false);
+
+    try {
+      const batch = batches.find(b => b.id === selectedBatchId);
+
+      if (!batch) {
+        showSnackbar("Lote não encontrado!", "error");
+        return;
+      }
+
+      if (movType === 'out' && movQty > batch.quantity) {
+        showSnackbar("Quantidade maior que o estoque disponível!", "error");
+        return;
+      }
+
+      const newQty = movType === 'out' ? batch.quantity - movQty : batch.quantity + movQty;
+
+      await updateDoc(doc(db, "batches", selectedBatchId), {
+        quantity: newQty
+      });
+
+      await addDoc(collection(db, "movements"), {
+        productId: movProduct.id,
+        batchId: selectedBatchId,
+        type: movType,
+        quantity: movQty,
+        date: dayjs().format('YYYY-MM-DD'),
+        reason: movReason || (movType === 'in' ? 'Entrada' : 'Saída'),
+      });
+
+      showSnackbar("Movimentação registrada 🚀", "success");
+
+      setMovDialogOpen(false);
+
+      await fetchBatches();
+
+    } catch (error) {
+      console.error("Erro na movimentação:", error);
+    }
   };
 
-  const handleDelete = () => {
-    if (deleteId) deleteProduct(deleteId);
+  const handleDelete = async () => {
+    if (!deleteId) return;
+
+    await deleteDoc(doc(db, "products", deleteId));
+
+    await fetchProducts();
     setDeleteId(null);
+  };
+
+  const handleDeleteBatch = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, "batches", id));
+
+      console.log("Lote deletado com sucesso");
+
+      await fetchBatches();
+
+    } catch (error) {
+      console.error("Erro ao deletar lote:", error);
+    }
   };
 
   const getExpirationStatus = (date?: string) => {
@@ -200,13 +344,13 @@ export default function Inventory() {
       >
         <Box>
           <Typography variant="h4">
-            {filterLowStock ? 'Estoque Baixo' : filterExpiring ? 'Produtos Vencendo' : 'Estoque'}
+            {filterLowStock ? 'Estoque Baixo' : filterExpiring ? 'Produtos Vencendo' : filterExpired ? 'Produtos Vencidos' : 'Estoque'}
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              {filteredProducts.length} {filterLowStock ? 'produtos com estoque baixo' : filterExpiring ? 'produtos com validade próxima' : 'produtos cadastrados'}
+              {filteredProducts.length} {filterLowStock ? 'produtos com estoque baixo' : filterExpiring ? 'produtos com validade próxima' : filterExpired ? 'produtos vencidos' : 'produtos cadastrados'}
             </Typography>
-            {(filterLowStock || filterExpiring) && (
+            {(filterLowStock || filterExpiring || filterExpired) && (
               <Chip
                 label="Limpar filtro"
                 size="small"
@@ -271,7 +415,7 @@ export default function Inventory() {
               return (
                 <TableRow key={p.id} hover sx={{ cursor: 'pointer' }} onClick={() => openBatches(p)}>
                   <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                    #{String(p.seqId).padStart(3, '0')}
+                    #{p.id.slice(0, 4)}
                   </TableCell>
                   <TableCell sx={{ fontWeight: 700, color: 'primary.main' }}>{p.shortId}</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>{p.name}</TableCell>
@@ -420,7 +564,7 @@ export default function Inventory() {
           <TextField label="Categoria" select fullWidth value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
             {categories.map(c => (<MenuItem key={c} value={c}>{c}</MenuItem>))}
           </TextField>
-          <TextField label="Aviso de Qtd Mínima (Soma Total)" type="number" fullWidth value={form.minQuantity} onChange={e => setForm({ ...form, minQuantity: Number(e.target.value) })} />
+          <TextField label="Aviso de Qtd Mínima (Soma Total)" type="number" fullWidth value={form.minQuantity} onChange={e => setForm({ ...form, minQuantity: Math.max(0, Number(e.target.value)) })} inputProps={{ min: 0 }} />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
@@ -466,18 +610,40 @@ export default function Inventory() {
                   <TextField label="Vencimento" type="date" fullWidth size="small" value={batchForm.expirationDate} onChange={e => setBatchForm({ ...batchForm, expirationDate: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
                 </Grid>
                 <Grid size={{ xs: 12, sm: 4 }}>
-                  <TextField label="Quantidade" type="number" fullWidth size="small" value={batchForm.quantity} onChange={e => setBatchForm({ ...batchForm, quantity: Number(e.target.value) })} />
+                  <TextField label="Quantidade" type="number" fullWidth size="small" value={batchForm.quantity} onChange={e => setBatchForm({ ...batchForm, quantity: Math.max(0, Number(e.target.value)) })} inputProps={{ min: 0 }} />
                 </Grid>
                 <Grid size={{ xs: 12, sm: 4 }} sx={{ display: 'flex', gap: 1 }}>
-                  <Button variant="contained" fullWidth onClick={() => {
-                    if (editingBatchId) {
-                      updateBatch({ ...batchForm, id: editingBatchId } as ProductBatch);
-                    } else {
-                      addBatch(batchForm);
+                  <Button variant="contained" fullWidth onClick={async () => {
+                    try {
+                      if (!selectedProduct) return;
+
+                      if (editingBatchId) {
+                        await updateDoc(doc(db, "batches", editingBatchId), {
+                          description: batchForm.description,
+                          entryDate: batchForm.entryDate,
+                          expirationDate: batchForm.expirationDate,
+                          quantity: batchForm.quantity,
+                        });
+                      } else {
+                        await addDoc(collection(db, "batches"), {
+                          productId: selectedProduct.id,
+                          description: batchForm.description,
+                          entryDate: batchForm.entryDate,
+                          expirationDate: batchForm.expirationDate,
+                          quantity: batchForm.quantity,
+                        });
+                      }
+
+                      await fetchBatches();
+
+                      setBatchForm(null);
+                      setEditingBatchId(null);
+
+                    } catch (error) {
+                      console.error("Erro ao salvar lote:", error);
                     }
-                    setBatchForm(null);
-                    setEditingBatchId(null);
-                  }}>Salvar</Button>
+                  }}>Salvar
+                  </Button>
                   <Button color="inherit" onClick={() => { setBatchForm(null); setEditingBatchId(null); }}>X</Button>
                 </Grid>
               </Grid>
@@ -515,7 +681,7 @@ export default function Inventory() {
                       <IconButton size="small" onClick={() => { setBatchForm(b); setEditingBatchId(b.id); }}>
                         <EditIcon fontSize="inherit" />
                       </IconButton>
-                      <IconButton size="small" color="error" onClick={() => deleteBatch(b.id)}>
+                      <IconButton size="small" color="error" onClick={() => handleDeleteBatch(b.id)}>
                         <DeleteIcon fontSize="inherit" />
                       </IconButton>
                     </TableCell>
@@ -577,6 +743,18 @@ export default function Inventory() {
           <Button color="error" variant="contained" onClick={handleDelete}>Excluir</Button>
         </DialogActions>
       </Dialog>
+
+      {/* ─── Snackbar Notification ──────────────────────── */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }} variant="filled">
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

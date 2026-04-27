@@ -1,3 +1,6 @@
+import { db } from "../firebase/db";
+import { collection, getDocs, addDoc } from "firebase/firestore";
+import { doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -44,8 +47,8 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import dayjs from 'dayjs';
 import { useStore } from '../store';
+import dayjs from 'dayjs';
 import type { Appointment, AppointmentStatus } from '../store';
 
 const services = [
@@ -73,8 +76,8 @@ export default function Appointments() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [searchParams, setSearchParams] = useSearchParams();
-  const { appointments, clients, addAppointment, updateAppointment, deleteAppointment } = useStore();
-
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [tabIndex, setTabIndex] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -111,8 +114,57 @@ export default function Appointments() {
     return c ? `${c.petName} (${c.name})` : '—';
   };
 
+  const fetchAppointments = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "appointments"));
+
+      const data = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      setAppointments(data);
+
+    } catch (error) {
+      console.error("Erro ao buscar agendamentos:", error);
+    }
+  };
+
+  const fetchClients = async () => {
+  try {
+    const querySnapshot = await getDocs(collection(db, "clients"));
+
+    const data = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    setClients(data);
+
+  } catch (error) {
+    console.error("Erro ao buscar clientes:", error);
+  }
+};
+
+  useEffect(() => {
+    fetchAppointments();
+    fetchClients();
+  }, []);
+
+
   const filteredAppointments = useMemo(() => {
     let list = appointments;
+    const filterOverdue = searchParams.get('filter') === 'overdue';
+
+    if (filterOverdue) {
+      const now = dayjs();
+      list = list.filter(a => {
+        if (a.status !== 'agendado') return false;
+        if (!a.date || !a.time) return false;
+        return dayjs(`${a.date}T${a.time}`).isBefore(now);
+      });
+    }
+
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(a => {
@@ -125,34 +177,92 @@ export default function Appointments() {
       });
     }
 
-    if (tabIndex === 0) return list.filter(a => a.status === 'agendado').sort((a, b) => a.date.localeCompare(b.date));
-    if (tabIndex === 1) return list.filter(a => a.status === 'concluido').sort((a, b) => b.date.localeCompare(a.date));
-    if (tabIndex === 2) return list.filter(a => a.status === 'cancelado').sort((a, b) => b.date.localeCompare(a.date));
+    if (tabIndex === 0)
+      return list
+        .filter(a => a.status === 'agendado')
+        .sort((a, b) => {
+          const dateA = a.date && a.time ? new Date(`${a.date}T${a.time}`).getTime() : 0;
+          const dateB = b.date && b.time ? new Date(`${b.date}T${b.time}`).getTime() : 0;
+          return dateA - dateB;
+        });
+
+    if (tabIndex === 1)
+      return list
+        .filter(a => a.status === 'concluido')
+        .sort((a, b) => {
+          const dateA = a.date && a.time ? new Date(`${a.date}T${a.time}`).getTime() : 0;
+          const dateB = b.date && b.time ? new Date(`${b.date}T${b.time}`).getTime() : 0;
+          return dateB - dateA;
+        });
+
+    if (tabIndex === 2)
+      return list
+        .filter(a => a.status === 'cancelado')
+        .sort((a, b) => {
+          const dateA = a.date && a.time ? new Date(`${a.date}T${a.time}`).getTime() : 0;
+          const dateB = b.date && b.time ? new Date(`${b.date}T${b.time}`).getTime() : 0;
+          return dateB - dateA;
+        });
+
     return list;
   }, [appointments, search, tabIndex, clients]);
 
 
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.clientId) return;
-    addAppointment({ ...form, status: 'agendado' });
-    setDialogOpen(false);
+
+    try {
+      const client = clients.find(c => c.id === form.clientId);
+
+      await addDoc(collection(db, "appointments"), {
+        clientId: form.clientId,
+        clientName: client?.name || "",
+        petName: client?.petName || "",
+        service: form.service,
+        date: form.date || new Date().toISOString().split("T")[0],
+        time: form.time || "00:00",
+        status: "agendado",
+        createdAt: new Date()
+      });
+
+      await fetchAppointments();
+      setDialogOpen(false);
+
+    } catch (error) {
+      console.error("Erro ao salvar:", error);
+    }
   };
 
-  const handleStatusChange = (id: string, status: AppointmentStatus) => {
-    const app = appointments.find(a => a.id === id);
-    if (app) updateAppointment({ ...app, status });
+  const handleStatusChange = async (id: string, status: AppointmentStatus) => {
+    try {
+      await updateDoc(doc(db, "appointments", id), {
+        status
+      });
+
+      await fetchAppointments();
+
+    } catch (error) {
+      console.error("Erro ao atualizar status:", error);
+    }
   };
 
   const handleOpenView = (app: Appointment) => setViewedAppointment(app);
   const handleCloseView = () => setViewedAppointment(null);
 
-  const handleDelete = () => {
-    if (deleteId) {
-      deleteAppointment(deleteId);
+  const handleDelete = async () => {
+    if (!deleteId) return;
+
+    try {
+      await deleteDoc(doc(db, "appointments", deleteId));
+
+      await fetchAppointments();
       setDeleteId(null);
+
+    } catch (error) {
+      console.error("Erro ao deletar:", error);
     }
-  };
+};
 
   const viewedClient = viewedAppointment ? clients.find(c => c.id === viewedAppointment.clientId) : null;
 
@@ -228,8 +338,8 @@ export default function Appointments() {
                     {client?.petName || 'Pet'}
                   </Typography>
                   <Chip 
-                    label={statusConfig[a.status].label} 
-                    color={statusConfig[a.status].color} 
+                    label={statusConfig[a.status as keyof typeof statusConfig].label}
+                    color={statusConfig[a.status as keyof typeof statusConfig].color}
                     size="small" 
                     sx={{ fontWeight: 700, height: 20, fontSize: '0.65rem' }}
                   />
@@ -321,9 +431,9 @@ export default function Appointments() {
                   </TableCell>
                   <TableCell>
                     <Chip 
-                      label={statusConfig[a.status].label} 
-                      color={statusConfig[a.status].color} 
-                      size="small" 
+                        label={statusConfig[a.status as keyof typeof statusConfig].label}
+                        color={statusConfig[a.status as keyof typeof statusConfig].color} 
+                        size="small" 
                     />
                   </TableCell>
                   <TableCell align="right">
