@@ -42,7 +42,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
-import { useStore } from '../store';
+
 import type { Product, ProductBatch, MovementType } from '../store';
 import dayjs from 'dayjs';
 
@@ -66,7 +66,7 @@ export default function Inventory() {
   const filterExpired = searchParams.get('filter') === 'expired';
   //const { products, batches, addProduct, updateProduct, deleteProduct, addBatch, updateBatch, deleteBatch, addMovement } = useStore();
   //const { batches, addBatch, updateBatch, deleteBatch, addMovement } = useStore();
-  const { addMovement } = useStore();
+
   const [batches, setBatches] = useState<any[]>([]);
 
   const [snackbar, setSnackbar] = useState<{open: boolean, message: string, severity: 'success' | 'error'}>({

@@ -47,7 +47,7 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { useStore } from '../store';
+
 import dayjs from 'dayjs';
 import type { Appointment, AppointmentStatus } from '../store';
 

@@ -24,7 +24,6 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
   Button,
 } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
