@@ -82,8 +82,11 @@ export default function Dashboard() {
   const [clients, setClients] = useState<any[]>([]);
 
   const [expiredAlertOpen, setExpiredAlertOpen] = useState(false);
+  const [lowStockAlertOpen, setLowStockAlertOpen] = useState(false);
   const [overdueAlertOpen, setOverdueAlertOpen] = useState(false);
+  
   const [expiredItems, setExpiredItems] = useState<any[]>([]);
+  const [lowStockItems, setLowStockItems] = useState<any[]>([]);
   const [overdueItems, setOverdueItems] = useState<any[]>([]);
 
   useEffect(() => {
@@ -114,6 +117,13 @@ export default function Dashboard() {
           }
         });
 
+        const lowStockList = prods.filter(p => {
+          const totalQty = bats
+            .filter(b => b.productId === p.id)
+            .reduce((sum, b) => sum + b.quantity, 0);
+          return totalQty <= p.minQuantity;
+        });
+
         const overdueList = apps.filter(a => {
           if (a.status !== 'agendado') return false;
           if (!a.date || !a.time) return false;
@@ -121,11 +131,14 @@ export default function Dashboard() {
         });
 
         setExpiredItems(expiredList);
+        setLowStockItems(lowStockList);
         setOverdueItems(overdueList);
 
         if (!sessionStorage.getItem('dashboardAlertsShown')) {
           if (expiredList.length > 0) {
             setExpiredAlertOpen(true);
+          } else if (lowStockList.length > 0) {
+            setLowStockAlertOpen(true);
           } else if (overdueList.length > 0) {
             setOverdueAlertOpen(true);
           }
@@ -140,6 +153,15 @@ export default function Dashboard() {
 
   const handleCloseExpired = () => {
     setExpiredAlertOpen(false);
+    if (lowStockItems.length > 0) {
+      setLowStockAlertOpen(true);
+    } else if (overdueItems.length > 0) {
+      setOverdueAlertOpen(true);
+    }
+  };
+
+  const handleCloseLowStock = () => {
+    setLowStockAlertOpen(false);
     if (overdueItems.length > 0) {
       setOverdueAlertOpen(true);
     }
@@ -310,6 +332,52 @@ export default function Dashboard() {
             onClick={() => {
               handleCloseExpired();
               navigate('/inventory?filter=expired');
+            }}
+          >
+            Verificar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Low Stock Products Dialog */}
+      <Dialog open={lowStockAlertOpen} onClose={handleCloseLowStock} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'error.light', color: 'white' }}>
+          <Typography variant="h6" fontWeight={700}>Aviso de Estoque Baixo</Typography>
+          <IconButton color="inherit" onClick={handleCloseLowStock} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Typography variant="body1" sx={{ mb: 2, mt: 1, fontWeight: 500 }}>
+            Os seguintes produtos atingiram o limite mínimo de estoque e precisam de reposição:
+          </Typography>
+          <List sx={{ bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+            {lowStockItems.map((item, i) => {
+              const totalQty = batches
+                .filter(b => b.productId === item.id)
+                .reduce((sum, b) => sum + b.quantity, 0);
+              return (
+                <Box key={i}>
+                  {i > 0 && <Divider />}
+                  <ListItem>
+                    <ListItemText
+                      primary={<Typography fontWeight={700}>{item.name}</Typography>}
+                      secondary={`Cód: ${item.shortId} | Qtd Atual: ${totalQty} (Mínimo: ${item.minQuantity})`}
+                    />
+                  </ListItem>
+                </Box>
+              );
+            })}
+          </List>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button onClick={handleCloseLowStock} color="inherit">Fechar</Button>
+          <Button 
+            variant="contained" 
+            color="error" 
+            onClick={() => {
+              handleCloseLowStock();
+              navigate('/inventory?filter=low-stock');
             }}
           >
             Verificar

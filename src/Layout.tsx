@@ -70,6 +70,7 @@ export default function Layout() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   useEffect(() => {
     const unsubProducts = onSnapshot(collection(db, "products"), snap => {
@@ -95,13 +96,21 @@ export default function Layout() {
 
   const expiredBatches = batches.filter(b => b.expirationDate && dayjs(b.expirationDate).diff(dayjs(), 'day') <= 0);
   const expiringBatches = batches.filter(b => b.expirationDate && dayjs(b.expirationDate).diff(dayjs(), 'day') > 0 && dayjs(b.expirationDate).diff(dayjs(), 'day') <= 30);
+  
+  const lowStockProducts = products.filter(p => {
+    const totalQty = batches
+      .filter(b => b.productId === p.id)
+      .reduce((sum, b) => sum + b.quantity, 0);
+    return totalQty <= p.minQuantity;
+  });
+
   const overdueAppointments = appointments.filter(a => {
     if (a.status !== 'agendado') return false;
     if (!a.date || !a.time) return false;
     return dayjs(`${a.date}T${a.time}`).isBefore(dayjs());
   });
 
-  const totalNotifications = expiredBatches.length + expiringBatches.length + overdueAppointments.length;
+  const totalNotifications = expiredBatches.length + expiringBatches.length + lowStockProducts.length + overdueAppointments.length;
 
   const drawerContent = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -261,11 +270,39 @@ export default function Layout() {
             boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
           }}
         >
-          <Toolbar sx={{ justifyContent: 'center' }}>
-            <PetsIcon sx={{ color: 'primary.main', mr: 1, fontSize: 24 }} />
-            <Typography variant="h6" sx={{ fontWeight: 800, color: 'primary.dark', letterSpacing: -0.5 }}>
-              Lucky Animal
-            </Typography>
+          <Toolbar sx={{ justifyContent: 'space-between', position: 'relative' }}>
+            {/* Espaçador invisível na esquerda para equilibrar o layout flex (mesmo tamanho do botão direito) */}
+            <Box sx={{ width: 48 }} />
+
+            {/* Logo Centralizada (Padrão ouro em apps nativos) */}
+            <Box sx={{ 
+              position: 'absolute',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              display: 'flex', 
+              alignItems: 'center',
+              width: 'max-content'
+            }}>
+              <PetsIcon sx={{ color: 'primary.main', mr: 1, fontSize: 32 }} />
+              <Typography variant="h5" sx={{ fontWeight: 900, color: 'primary.dark', letterSpacing: -0.5, fontSize: '1.6rem' }}>
+                Lucky Animal
+              </Typography>
+            </Box>
+
+            {/* Notificações na Direita */}
+            <IconButton 
+              onClick={() => setNotificationsOpen(true)}
+              sx={{ 
+                color: totalNotifications > 0 ? 'error.main' : 'text.secondary',
+                bgcolor: totalNotifications > 0 ? 'error.50' : 'transparent',
+                width: 48,
+                height: 48
+              }}
+            >
+              <Badge badgeContent={totalNotifications} color="error">
+                <NotificationsIcon />
+              </Badge>
+            </IconButton>
           </Toolbar>
         </AppBar>
       )}
@@ -290,8 +327,9 @@ export default function Layout() {
         component="main"
         sx={{
           flexGrow: 1,
-          p: { xs: 2, sm: 3, md: 4 },
-          pb: isMobile ? 12 : 4,
+          px: { xs: 2, sm: 3, md: 4 },
+          pt: { xs: 2, sm: 3, md: 4 },
+          pb: { xs: 18, sm: 18, md: 4 }, // Maior espaçamento para liberar o BottomNav e o FAB
           width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
           maxWidth: '100vw',
           overflowX: 'hidden',
@@ -331,11 +369,25 @@ export default function Layout() {
         >
           <BottomNavigation
             showLabels
-            value={location.pathname}
+            value={profileOpen ? 'profile' : location.pathname}
             onChange={(_, newValue) => {
-              navigate(newValue);
+              if (newValue === 'profile') {
+                setProfileOpen(true);
+              } else {
+                setProfileOpen(false);
+                navigate(newValue);
+              }
             }}
-            sx={{ height: 72 }}
+            sx={{ 
+              height: 72,
+              justifyContent: 'flex-start',
+              overflowX: 'auto',
+              flexWrap: 'nowrap',
+              WebkitOverflowScrolling: 'touch',
+              '&::-webkit-scrollbar': { display: 'none' },
+              msOverflowStyle: 'none',
+              scrollbarWidth: 'none',
+            }}
           >
             {navItems.map((item) => (
               <BottomNavigationAction
@@ -345,6 +397,8 @@ export default function Layout() {
                 icon={item.icon}
                 sx={{
                   color: 'text.secondary',
+                  minWidth: { xs: '72px', sm: 'auto' },
+                  flexShrink: 0,
                   '&.Mui-selected': {
                     color: `${item.color}.main`,
                     fontWeight: 700,
@@ -352,6 +406,22 @@ export default function Layout() {
                 }}
               />
             ))}
+            <BottomNavigationAction
+              key="profile"
+              label="Eu"
+              value="profile"
+              icon={<PersonIcon />}
+              onClick={() => setProfileOpen(true)}
+              sx={{
+                color: 'text.secondary',
+                minWidth: { xs: '72px', sm: 'auto' },
+                flexShrink: 0,
+                '&.Mui-selected': {
+                  color: `primary.main`,
+                  fontWeight: 700,
+                },
+              }}
+            />
           </BottomNavigation>
         </Paper>
       )}
@@ -387,6 +457,48 @@ export default function Layout() {
         </SpeedDial>
       )}
 
+      {/* Profile Dialog */}
+      <Dialog open={profileOpen} onClose={() => setProfileOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6" fontWeight={700}>Meu Perfil</Typography>
+          <IconButton onClick={() => setProfileOpen(false)} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+          <Avatar src={auth.currentUser?.photoURL || ''} sx={{ width: 80, height: 80, bgcolor: 'primary.light', mb: 1 }}>
+            <PersonIcon sx={{ fontSize: 40 }} />
+          </Avatar>
+          <Box sx={{ textAlign: 'center', width: '100%' }}>
+            <Typography variant="h6" sx={{ fontWeight: 800 }}>
+              {auth.currentUser?.displayName || 'Usuário Luck'}
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
+              {auth.currentUser?.email || 'admin@luckyanimal.com'}
+            </Typography>
+            
+            <Button 
+              variant="contained" 
+              color="error" 
+              fullWidth 
+              startIcon={<LogoutIcon />}
+              onClick={() => {
+                setProfileOpen(false);
+                signOut(auth);
+              }}
+              sx={{ 
+                py: 1.5, 
+                borderRadius: 2,
+                fontWeight: 700,
+                boxShadow: '0 4px 10px rgba(211,47,47,0.25)',
+              }}
+            >
+              Sair da Conta
+            </Button>
+          </Box>
+        </DialogContent>
+      </Dialog>
+
       {/* Notifications Dialog */}
       <Dialog open={notificationsOpen} onClose={() => setNotificationsOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -421,6 +533,33 @@ export default function Layout() {
                 size="small" 
                 sx={{ mt: 1 }}
                 onClick={() => { setNotificationsOpen(false); navigate('/inventory?filter=expired'); }}
+              >
+                Verificar Estoque
+              </Button>
+            </Paper>
+          )}
+
+          {lowStockProducts.length > 0 && (
+            <Paper variant="outlined" sx={{ p: 2, borderColor: 'error.main', bgcolor: 'error.50' }}>
+              <Typography variant="subtitle1" fontWeight={700} color="error.main" mb={1}>
+                {lowStockProducts.length} Produto(s) com Estoque Baixo
+              </Typography>
+              {lowStockProducts.map(p => {
+                const totalQty = batches
+                  .filter(b => b.productId === p.id)
+                  .reduce((sum, b) => sum + b.quantity, 0);
+                return (
+                  <Typography key={p.id} variant="body2" mb={0.5}>
+                    • <b>{p.name}</b> — Qtd Atual: {totalQty} (Mínimo: {p.minQuantity})
+                  </Typography>
+                );
+              })}
+              <Button 
+                variant="outlined" 
+                color="error" 
+                size="small" 
+                sx={{ mt: 1 }}
+                onClick={() => { setNotificationsOpen(false); navigate('/inventory?filter=low-stock'); }}
               >
                 Verificar Estoque
               </Button>

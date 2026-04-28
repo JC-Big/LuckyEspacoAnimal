@@ -68,8 +68,24 @@ export default function Login({ onLogin }: LoginProps) {
 };
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
-      {/* Left side - Image & Branding */}
+    <Box sx={{ 
+      display: 'flex', 
+      height: '100vh', 
+      width: '100vw', 
+      overflow: 'hidden',
+      backgroundImage: `url(${loginBg})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      position: 'relative'
+    }}>
+      {/* Background Overlay general */}
+      <Box sx={{
+        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)', // Very soft light over the whole image
+        zIndex: 0
+      }} />
+
+      {/* Left side - Image & Branding (Desktop) */}
       <Box
         sx={{
           flex: { xs: 0, md: 1 },
@@ -78,24 +94,11 @@ export default function Login({ onLogin }: LoginProps) {
           justifyContent: 'center',
           alignItems: 'center',
           position: 'relative',
-          bgcolor: 'primary.dark',
-          backgroundImage: `url(${loginBg})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
+          zIndex: 1,
           color: 'primary.contrastText',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 137, 123, 0.4)', // theme primary with opacity
-            zIndex: 1,
-          }
         }}
       >
-        <Box sx={{ position: 'relative', zIndex: 2, textAlign: 'center', p: 5, backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0, 0, 0, 0.2)', borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)' }}>
+        <Box sx={{ position: 'relative', zIndex: 2, textAlign: 'center', p: 5, backdropFilter: 'blur(10px)', backgroundColor: 'rgba(0, 137, 123, 0.7)', borderRadius: 4, border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
            <PetsIcon sx={{ fontSize: 72, mb: 2, color: 'white' }} />
            <Typography variant="h2" sx={{ fontWeight: 800, mb: 1, textShadow: '0 2px 10px rgba(0,0,0,0.3)' }}>
              Lucky Animal
@@ -114,16 +117,29 @@ export default function Login({ onLogin }: LoginProps) {
           flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
-          bgcolor: 'background.default',
           position: 'relative',
-          px: { xs: 4, sm: 8, md: 12 },
+          zIndex: 1,
+          px: { xs: 2, sm: 8, md: 12 },
+          bgcolor: { xs: 'transparent', md: 'rgba(255, 255, 255, 0.95)' }, // Desktop has a solid/translucent right panel
+          backdropFilter: { xs: 'none', md: 'blur(10px)' },
+          boxShadow: { xs: 'none', md: '-10px 0 30px rgba(0,0,0,0.1)' }
         }}
       >
         <Fade in timeout={1000}>
-          <Box sx={{ width: '100%', maxWidth: 420 }}>
+          <Box sx={{ 
+            width: '100%', 
+            maxWidth: 420, 
+            position: 'relative', 
+            zIndex: 2,
+            bgcolor: { xs: 'rgba(255, 255, 255, 0.95)', md: 'transparent' },
+            p: { xs: 4, md: 0 },
+            borderRadius: { xs: 4, md: 0 },
+            boxShadow: { xs: '0 8px 32px rgba(0,0,0,0.15)', md: 'none' },
+            backdropFilter: { xs: 'blur(10px)', md: 'none' }
+          }}>
             {/* Mobile Header (Only visible on small screens) */}
             <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', alignItems: 'center', mb: 4 }}>
-              <Box sx={{ p: 2, borderRadius: '50%', bgcolor: 'primary.light', color: 'white', mb: 2, boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
+              <Box sx={{ p: 2, borderRadius: '50%', bgcolor: 'primary.main', color: 'white', mb: 2, boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
                 <PetsIcon sx={{ fontSize: 40 }} />
               </Box>
               <Typography variant="h4" color="primary.main" fontWeight="800">
@@ -131,8 +147,8 @@ export default function Login({ onLogin }: LoginProps) {
               </Typography>
             </Box>
 
-            <Box sx={{ mb: 6 }}>
-              <Typography variant="h4" sx={{ fontWeight: 800, color: 'text.primary', mb: 1 }}>
+            <Box sx={{ mb: { xs: 4, md: 6 }, textAlign: { xs: 'center', md: 'left' } }}>
+              <Typography variant="h4" sx={{ fontWeight: 800, color: 'text.primary', mb: 1, fontSize: { xs: '1.8rem', md: '2.125rem' } }}>
                 Bem-vindo de volta! 👋
               </Typography>
               <Typography variant="body1" color="text.secondary">
@@ -187,11 +203,7 @@ export default function Login({ onLogin }: LoginProps) {
                 }}
               />
 
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: -1 }}>
-                <Typography variant="body2" color="primary.main" sx={{ cursor: 'pointer', fontWeight: 600, '&:hover': { textDecoration: 'underline' } }}>
-                  Esqueceu a senha?
-                </Typography>
-              </Box>
+
 
               <Button
                 type="submit"
