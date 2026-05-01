@@ -256,7 +256,14 @@ export default function Dashboard() {
       </Typography>
       <Grid container spacing={2}>
         {appointments
-          .filter(a => a.status === 'agendado')
+          .filter(a => {
+            if (a.status !== 'agendado' || !a.date || !a.time) return false;
+            const apptDateTime = dayjs(`${a.date}T${a.time}`);
+            const now = dayjs();
+            const maxDate = now.add(10, 'day').endOf('day');
+            return apptDateTime.isAfter(now) && apptDateTime.isBefore(maxDate);
+          })
+          .sort((a, b) => dayjs(`${a.date}T${a.time}`).diff(dayjs(`${b.date}T${b.time}`)))
           .slice(0, 4)
           .map(a => {
             const client = clients.find(c => c.id === a.clientId);
@@ -287,11 +294,15 @@ export default function Dashboard() {
               </Grid>
             );
           })}
-        {appointments.filter(a => a.status === 'agendado').length === 0 && (
+        {appointments.filter(a => {
+            if (a.status !== 'agendado' || !a.date || !a.time) return false;
+            const apptDateTime = dayjs(`${a.date}T${a.time}`);
+            return apptDateTime.isAfter(dayjs()) && apptDateTime.isBefore(dayjs().add(10, 'day').endOf('day'));
+          }).length === 0 && (
           <Grid size={{ xs: 12 }}>
             <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', borderRadius: 4, bgcolor: 'background.default', borderStyle: 'dashed' }}>
               <Typography variant="body2" color="text.secondary">
-                Nenhum agendamento pendente para os próximos dias.
+                Nenhum agendamento futuro para os próximos 10 dias.
               </Typography>
             </Paper>
           </Grid>

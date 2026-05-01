@@ -223,7 +223,11 @@ export default function Layout() {
             {auth.currentUser?.email || 'admin@luckyanimal.com'}
           </Typography>
         </Box>
-        <IconButton size="small" color="error" title="Sair" onClick={() => signOut(auth)}>
+        <IconButton size="small" color="error" title="Sair" onClick={() => {
+          signOut(auth).then(() => {
+            window.location.replace('/');
+          });
+        }}>
           <LogoutIcon fontSize="small" />
         </IconButton>
       </Box>
@@ -484,7 +488,9 @@ export default function Layout() {
               startIcon={<LogoutIcon />}
               onClick={() => {
                 setProfileOpen(false);
-                signOut(auth);
+                signOut(auth).then(() => {
+                  window.location.replace('/');
+                });
               }}
               sx={{ 
                 py: 1.5, 

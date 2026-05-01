@@ -19,7 +19,6 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  MenuItem,
   useMediaQuery,
   useTheme,
   Avatar,
@@ -28,6 +27,7 @@ import {
   Alert,
   Fab,
   Paper,
+  Autocomplete,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -317,9 +317,14 @@ export default function Clients() {
           <Typography variant="overline" sx={{ color: 'text.secondary', fontWeight: 700, mt: 1 }}>Dados do Pet</Typography>
           <TextField label="Nome do Pet" fullWidth value={form.petName} onChange={e => setForm({ ...form, petName: e.target.value })} />
           <Box sx={{ display: 'flex', gap: 2 }}>
-            <TextField label="Espécie" select fullWidth value={form.petSpecies} onChange={e => setForm({ ...form, petSpecies: e.target.value })}>
-              {speciesList.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
-            </TextField>
+            <Autocomplete
+              options={speciesList}
+              fullWidth
+              value={form.petSpecies || null}
+              onChange={(_, newValue) => setForm({ ...form, petSpecies: newValue || '' })}
+              renderInput={(params) => <TextField {...params} label="Espécie" />}
+              noOptionsText="Nenhuma espécie"
+            />
             <TextField label="Raça" fullWidth value={form.petBreed} onChange={e => setForm({ ...form, petBreed: e.target.value })} />
           </Box>
           <Typography variant="overline" sx={{ color: 'text.secondary', fontWeight: 700, mt: 1 }}>Endereço</Typography>

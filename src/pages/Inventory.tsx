@@ -27,7 +27,6 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  MenuItem,
   useMediaQuery,
   useTheme,
   Tooltip,
@@ -35,6 +34,7 @@ import {
   Grid,
   Snackbar,
   Alert,
+  Autocomplete,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -561,9 +561,14 @@ export default function Inventory() {
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: '16px !important' }}>
           <TextField label="ID Único do Produto (ex: COLM)" fullWidth value={form.shortId} onChange={e => setForm({ ...form, shortId: e.target.value.toUpperCase() })} />
           <TextField label="Nome do Modelo (ex: Ração Golden 15kg)" fullWidth value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-          <TextField label="Categoria" select fullWidth value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
-            {categories.map(c => (<MenuItem key={c} value={c}>{c}</MenuItem>))}
-          </TextField>
+          <Autocomplete
+            options={categories}
+            fullWidth
+            value={form.category || null}
+            onChange={(_, newValue) => setForm({ ...form, category: newValue || '' })}
+            renderInput={(params) => <TextField {...params} label="Categoria" />}
+            noOptionsText="Nenhuma categoria"
+          />
           <TextField label="Aviso de Qtd Mínima (Soma Total)" type="number" fullWidth value={form.minQuantity} onChange={e => setForm({ ...form, minQuantity: Math.max(0, Number(e.target.value)) })} inputProps={{ min: 0 }} />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -709,19 +714,16 @@ export default function Inventory() {
             Produto: <strong>{movProduct?.name}</strong>
           </Typography>
           
-          <TextField 
-            label="Selecione o Lote / Entrada" 
-            select 
-            fullWidth 
-            value={selectedBatchId} 
-            onChange={e => setSelectedBatchId(e.target.value)}
-          >
-            {batches.filter(b => b.productId === movProduct?.id).map(b => (
-              <MenuItem key={b.id} value={b.id}>
-                {b.description || 'Lote Único'} — Disp: {b.quantity} (Val: {b.expirationDate ? dayjs(b.expirationDate).format('DD/MM/YY') : 'Sem data'})
-              </MenuItem>
-            ))}
-          </TextField>
+          <Autocomplete
+            options={batches.filter(b => b.productId === movProduct?.id)}
+            fullWidth
+            getOptionLabel={(b) => `${b.description || 'Lote Único'} — Disp: ${b.quantity} (Val: ${b.expirationDate ? dayjs(b.expirationDate).format('DD/MM/YY') : 'Sem data'})`}
+            value={batches.find(b => b.id === selectedBatchId) || null}
+            onChange={(_, newValue) => setSelectedBatchId(newValue ? newValue.id : '')}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            renderInput={(params) => <TextField {...params} label="Lote / Entrada" />}
+            noOptionsText="Nenhum lote"
+          />
 
           <TextField label="Quantidade para Baixa" type="number" fullWidth value={movQty} onChange={e => setMovQty(Math.max(1, Number(e.target.value)))} inputProps={{ min: 1 }} />
           <TextField label="Motivo da Saída" fullWidth value={movReason} onChange={e => setMovReason(e.target.value)} placeholder="Ex: Venda no balcão" />

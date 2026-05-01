@@ -54,6 +54,9 @@ export default function Login({ onLogin }: LoginProps) {
 
     console.log("Usuário logado:", userCredential.user);
 
+    // Garante que os cards de priorização/alertas apareçam no Dashboard após o login
+    sessionStorage.removeItem('dashboardAlertsShown');
+
     showSnackbar("Login realizado com sucesso!", "success");
     // Pequeno delay para exibir o card antes de redirecionar
     setTimeout(() => {

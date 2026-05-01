@@ -27,7 +27,7 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  MenuItem,
+  Autocomplete,
   useMediaQuery,
   useTheme,
   Tooltip,
@@ -486,19 +486,18 @@ export default function Appointments() {
         )}
         <DialogTitle sx={{ fontWeight: 700, display: { xs: 'none', sm: 'block' } }}>Novo Agendamento</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: '16px !important' }}>
-          <TextField
-            label="Cliente"
-            select
+          <Autocomplete
+            options={clients}
             fullWidth
-            value={form.clientId}
-            onChange={e => setForm({ ...form, clientId: e.target.value })}
-          >
-            {clients.map(c => (
-              <MenuItem key={c.id} value={c.id}>
-                {c.petName} ({c.name})
-              </MenuItem>
-            ))}
-          </TextField>
+            getOptionLabel={(c) => `${c.petName} (${c.name})`}
+            value={clients.find(c => c.id === form.clientId) || null}
+            onChange={(_, newValue) => setForm({ ...form, clientId: newValue ? newValue.id : '' })}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            renderInput={(params) => (
+              <TextField {...params} label="Cliente" />
+            )}
+            noOptionsText="Nenhum cliente"
+          />
           <Box sx={{ display: 'flex', gap: 2 }}>
             <TextField
               label="Data"
@@ -517,17 +516,16 @@ export default function Appointments() {
               InputLabelProps={{ shrink: true }}
             />
           </Box>
-          <TextField
-            label="Serviço"
-            select
+          <Autocomplete
+            options={services}
             fullWidth
-            value={form.service}
-            onChange={e => setForm({ ...form, service: e.target.value })}
-          >
-            {services.map(s => (
-              <MenuItem key={s} value={s}>{s}</MenuItem>
-            ))}
-          </TextField>
+            value={form.service || null}
+            onChange={(_, newValue) => setForm({ ...form, service: newValue || '' })}
+            renderInput={(params) => (
+              <TextField {...params} label="Serviço" />
+            )}
+            noOptionsText="Nenhum serviço"
+          />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDialogOpen(false)} color="secondary">Cancelar</Button>
